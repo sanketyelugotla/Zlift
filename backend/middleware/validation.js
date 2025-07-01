@@ -13,6 +13,25 @@ const handleValidationErrors = (req, res, next) => {
     next()
 }
 
+// Admin signup validation
+const validateAdminSignup = [
+    body("firstName").trim().isLength({ min: 2 }).withMessage("First name must be at least 2 characters long"),
+    body("lastName").trim().isLength({ min: 2 }).withMessage("Last name must be at least 2 characters long"),
+    body("email").isEmail().normalizeEmail().withMessage("Please provide a valid email address"),
+    body("phone").isMobilePhone().withMessage("Please provide a valid phone number"),
+    body("password")
+        .isLength({ min: 8 })
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .withMessage(
+            "Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, and one number",
+        ),
+    body("role")
+        .optional()
+        .isIn(["super_admin", "admin", "operations_manager", "customer_support"])
+        .withMessage("Invalid role specified"),
+    handleValidationErrors,
+]
+
 // Auth validations
 const validateLogin = [
     body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
@@ -241,4 +260,5 @@ module.exports = {
     validatePromotion,
     validateCategory,
     validateSystemSettings,
+    validateAdminSignup
 }

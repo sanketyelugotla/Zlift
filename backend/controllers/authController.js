@@ -44,14 +44,70 @@ const adminLogin = async (req, res) => {
                 token,
                 user: {
                     id: admin._id,
-                    firstName: admin.firstName,
-                    lastName: admin.lastName,
+                    name: `${admin.firstName} ${admin.lastName}`,
                     email: admin.email,
                     role: admin.role,
                 },
             },
         })
     } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message,
+        })
+    }
+}
+
+// Admin Signup
+const adminSignup = async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, phone, role = "operations_manager" } = req.body
+
+        // Check if admin already exists
+        const existingAdmin = await AdminUser.findOne({ email })
+        if (existingAdmin) {
+            return res.status(400).json({
+                success: false,
+                message: "Admin user already exists with this email",
+            })
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12)
+
+        // Create admin user
+        const admin = new AdminUser({
+            firstName,
+            lastName,
+            email,
+            phone,
+            password: hashedPassword,
+            role,
+            permissions: [
+                { module: "dashboard", actions: ["read"] },
+                { module: "orders", actions: ["read", "write"] },
+                { module: "partners", actions: ["read"] },
+                { module: "customers", actions: ["read"] },
+            ],
+        })
+
+        await admin.save()
+
+        res.status(201).json({
+            success: true,
+            message: "Admin account created successfully",
+            data: {
+                user: {
+                    id: admin._id,
+                    name: `${admin.firstName} ${admin.lastName}`,
+                    email: admin.email,
+                    role: admin.role,
+                },
+            },
+        })
+    } catch (error) {
+        console.log(error)
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -372,6 +428,7 @@ const changePassword = async (req, res) => {
 
 module.exports = {
     adminLogin,
+    adminSignup,
     customerLogin,
     customerRegister,
     refreshToken,
