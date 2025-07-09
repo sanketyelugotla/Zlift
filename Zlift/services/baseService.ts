@@ -9,7 +9,7 @@ class BaseService {
     protected baseURL: string
     private authToken: string | null = null
 
-    constructor(baseURL = "http://192.168.0.105:5000//api") {
+    constructor(baseURL = "http://192.168.0.105:5000/api") {
         this.baseURL = baseURL
     }
 

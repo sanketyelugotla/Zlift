@@ -3,6 +3,7 @@ const { body, validationResult } = require("express-validator")
 // Validation error handler
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req)
+    console.log(errors)
     if (!errors.isEmpty()) {
         return res.status(400).json({
             success: false,
@@ -27,7 +28,7 @@ const validateAdminSignup = [
         ),
     body("role")
         .optional()
-        .isIn(["super_admin", "admin", "operations_manager", "customer_support"])
+        .isIn(["super_admin", "admin", "operations_manager", "customer_support", "partner_manager"])
         .withMessage("Invalid role specified"),
     handleValidationErrors,
 ]

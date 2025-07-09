@@ -20,12 +20,13 @@ import { useAuth } from "../contexts/AuthContext"
 
 export default function SignupScreen() {
     const [formData, setFormData] = useState({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        phone: "",
+        firstName: "Sanket",
+        lastName: "Yelugotla",
+        email: "sanket@gmail.com",
+        password: "Sanket@123",
+        confirmPassword: "Sanket@123",
+        phone: "9550572255",
+        role: "partner_manager",
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)

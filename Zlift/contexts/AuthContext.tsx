@@ -74,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const login = async (email: string, password: string) => {
         try {
             const response = await authService.login(email, password)
+            console.log(response)
 
             if (response.success && response.data) {
                 const { token, refreshToken, user: userData } = response.data
@@ -95,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const signup = async (data: SignupData) => {
         try {
             const response = await authService.signup(data)
+            // console.log(response)
 
             if (!response.success) {
                 throw new Error(response.message || "Signup failed")

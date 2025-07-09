@@ -25,6 +25,7 @@ const adminLogin = async (req, res) => {
                 message: "Invalid credentials",
             })
         }
+        // console.log(admin)
 
         // Check password
         const isPasswordValid = await bcrypt.compare(password, admin.password)
@@ -69,6 +70,7 @@ const adminLogin = async (req, res) => {
 
 // Admin Signup - Creates partner_manager by default
 const adminSignup = async (req, res) => {
+    console.log("signup")
     try {
         const { firstName, lastName, email, password, phone, role = "partner_manager" } = req.body
 
@@ -141,6 +143,7 @@ const adminSignup = async (req, res) => {
             },
         })
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -246,6 +249,7 @@ const customerLogin = async (req, res) => {
                 message: "Invalid credentials",
             })
         }
+        // console.log(customer)
 
         // Check password
         const isPasswordValid = await bcrypt.compare(password, customer.password)
