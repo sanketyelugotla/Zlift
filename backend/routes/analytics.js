@@ -1,37 +1,47 @@
 const express = require("express")
-const {
-    getAllDrones,
-    getDroneById,
-    createDrone,
-    updateDrone,
-    deleteDrone,
-    getDroneStats,
-    updateDroneStatus,
-    getDroneLocation,
-    updateDroneLocation,
-    getDroneFlightHistory,
-    scheduleMaintenance,
-} = require("../controllers/droneContoller")
-const { authenticateAdmin, checkPermission } = require("../middleware/auth")
-const { validateDrone, validateDroneStatus } = require("../middleware/validation")
-
 const router = express.Router()
+const {
+    getDashboardAnalytics,
+    getSalesAnalytics,
+    generateDailyAnalytics,
+    getRevenueAnalytics,
+    getPartnerAnalytics,
+    getCustomerAnalytics,
+    getDroneAnalytics,
+    getOperationalAnalytics,
+    exportAnalytics,
+} = require("../controllers/analyticsController")
+const { authenticateAdmin, checkPermission } = require("../middleware/auth")
 
-// All routes require admin authentication
+// All analytics routes require admin authentication and analytics read permission
 router.use(authenticateAdmin)
+router.use(checkPermission("analytics", "read"))
 
-// Drone CRUD routes
-router.get("/", checkPermission("drones", "read"), getAllDrones)
-router.get("/stats", checkPermission("drones", "read"), getDroneStats)
-router.get("/:id", checkPermission("drones", "read"), getDroneById)
-router.get("/:id/location", checkPermission("drones", "read"), getDroneLocation)
-router.get("/:id/flight-history", checkPermission("drones", "read"), getDroneFlightHistory)
+// Dashboard analytics
+router.get("/dashboard", getDashboardAnalytics)
 
-router.post("/", checkPermission("drones", "write"), validateDrone, createDrone)
-router.put("/:id", checkPermission("drones", "write"), validateDrone, updateDrone)
-router.patch("/:id/status", checkPermission("drones", "write"), validateDroneStatus, updateDroneStatus)
-router.patch("/:id/location", checkPermission("drones", "write"), updateDroneLocation)
-router.post("/:id/maintenance", checkPermission("drones", "write"), scheduleMaintenance)
-router.delete("/:id", checkPermission("drones", "delete"), deleteDrone)
+// Sales analytics
+router.get("/sales", getSalesAnalytics)
+
+// Revenue analytics
+router.get("/revenue", getRevenueAnalytics)
+
+// Partner analytics
+router.get("/partners", getPartnerAnalytics)
+
+// Customer analytics
+router.get("/customers", getCustomerAnalytics)
+
+// Drone analytics
+router.get("/drones", getDroneAnalytics)
+
+// Operational analytics
+router.get("/operations", getOperationalAnalytics)
+
+// Generate daily analytics (can be called manually or via cron)
+router.post("/daily", generateDailyAnalytics)
+
+// Export analytics
+router.get("/export", exportAnalytics)
 
 module.exports = router

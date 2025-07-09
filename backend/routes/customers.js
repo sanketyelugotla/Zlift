@@ -1,31 +1,33 @@
 const express = require("express")
-const {
-    adminLogin,
-    customerLogin,
-    customerRegister,
-    refreshToken,
-    logout,
-    forgotPassword,
-    resetPassword,
-    changePassword,
-} = require("../controllers/authController")
-const { authenticateAdmin, authenticateCustomer } = require("../middleware/auth")
-const { validateLogin, validateRegister, validatePasswordReset } = require("../middleware/validation")
-
 const router = express.Router()
+const {
+    getAllCustomers,
+    getCustomerById,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+    getCustomerStats,
+    getCustomerOrders,
+    updateCustomerStatus,
+    getCustomerAnalytics,
+} = require("../controllers/customerController")
+const { authenticateAdmin, checkPermission } = require("../middleware/auth")
+const { validateCustomer } = require("../middleware/validation")
 
-// Public routes
-router.post("/admin/login", validateLogin, adminLogin)
-router.post("/customer/login", validateLogin, customerLogin)
-router.post("/customer/register", validateRegister, customerRegister)
-router.post("/refresh-token", refreshToken)
-router.post("/forgot-password", forgotPassword)
-router.post("/reset-password", validatePasswordReset, resetPassword)
+// All routes require admin authentication
+router.use(authenticateAdmin)
 
-// Protected routes
-router.post("/admin/logout", authenticateAdmin, logout)
-router.post("/customer/logout", authenticateCustomer, logout)
-router.post("/admin/change-password", authenticateAdmin, changePassword)
-router.post("/customer/change-password", authenticateCustomer, changePassword)
+// Customer management
+router.get("/", checkPermission("customers", "read"), getAllCustomers)
+router.get("/stats", checkPermission("customers", "read"), getCustomerStats)
+router.get("/:id", checkPermission("customers", "read"), getCustomerById)
+router.post("/", checkPermission("customers", "write"), validateCustomer, createCustomer)
+router.put("/:id", checkPermission("customers", "update"), updateCustomer)
+router.delete("/:id", checkPermission("customers", "delete"), deleteCustomer)
+router.patch("/:id/status", checkPermission("customers", "update"), updateCustomerStatus)
+
+// Customer orders and analytics
+router.get("/:id/orders", checkPermission("customers", "read"), getCustomerOrders)
+router.get("/:id/analytics", checkPermission("customers", "read"), getCustomerAnalytics)
 
 module.exports = router

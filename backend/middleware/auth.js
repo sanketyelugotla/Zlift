@@ -34,6 +34,7 @@ const authenticateAdmin = async (req, res, next) => {
             id: admin._id,
             role: admin.role,
             userType: "admin",
+            permissions: admin.permissions,
         }
 
         next()

@@ -1,49 +1,33 @@
 const express = require("express")
-const {
-    getAllPartners,
-    getPartnerById,
-    createPartner,
-    updatePartner,
-    updatePartnerStatus,
-    deletePartner,
-    getPartnerStats,
-    getPartnerOrders,
-    getPartnerProducts,
-    uploadPartnerDocuments,
-    getPartnerAnalytics,
-} = require("../controllers/partnerController")
-const { authenticateAdmin, checkPermission } = require("../middleware/auth")
-const { validatePartner, validatePartnerStatus } = require("../middleware/validation")
-const upload = require("../middleware/upload")
-
 const router = express.Router()
+const {
+    getAllPayments,
+    getPaymentById,
+    updatePaymentStatus,
+    processSettlement,
+    getPaymentStats,
+    refundPayment,
+    getSettlementReport,
+    processWebhook,
+} = require("../controllers/paymentController")
+const { authenticateAdmin, checkPermission } = require("../middleware/auth")
+const { validatePaymentStatus, validateRefund } = require("../middleware/validation")
 
-// All routes require admin authentication
+// Webhook endpoint (no authentication required)
+router.post("/webhook", processWebhook)
+
+// All other routes require admin authentication
 router.use(authenticateAdmin)
 
-// Partner CRUD routes
-router.get("/", checkPermission("partners", "read"), getAllPartners)
-router.get("/stats", checkPermission("partners", "read"), getPartnerStats)
-router.get("/:id", checkPermission("partners", "read"), getPartnerById)
-router.get("/:id/orders", checkPermission("partners", "read"), getPartnerOrders)
-router.get("/:id/products", checkPermission("partners", "read"), getPartnerProducts)
-router.get("/:id/analytics", checkPermission("partners", "read"), getPartnerAnalytics)
+// Payment management
+router.get("/", checkPermission("payments", "read"), getAllPayments)
+router.get("/stats", checkPermission("payments", "read"), getPaymentStats)
+router.get("/settlement-report", checkPermission("payments", "read"), getSettlementReport)
+router.get("/:id", checkPermission("payments", "read"), getPaymentById)
+router.patch("/:id/status", checkPermission("payments", "update"), validatePaymentStatus, updatePaymentStatus)
+router.post("/:id/refund", checkPermission("payments", "update"), validateRefund, refundPayment)
 
-router.post("/", checkPermission("partners", "write"), validatePartner, createPartner)
-router.put("/:id", checkPermission("partners", "write"), validatePartner, updatePartner)
-router.patch("/:id/status", checkPermission("partners", "write"), validatePartnerStatus, updatePartnerStatus)
-router.delete("/:id", checkPermission("partners", "delete"), deletePartner)
-
-// File upload routes
-router.post(
-    "/:id/documents",
-    checkPermission("partners", "write"),
-    upload.fields([
-        { name: "logo", maxCount: 1 },
-        { name: "banner", maxCount: 1 },
-        { name: "license", maxCount: 1 },
-    ]),
-    uploadPartnerDocuments,
-)
+// Settlement operations
+router.post("/settlement", checkPermission("payments", "update"), processSettlement)
 
 module.exports = router

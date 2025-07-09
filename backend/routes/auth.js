@@ -1,7 +1,9 @@
 const express = require("express")
+const router = express.Router()
 const {
     adminLogin,
     adminSignup,
+    createSuperAdmin,
     customerLogin,
     customerRegister,
     refreshToken,
@@ -15,25 +17,28 @@ const {
     validateLogin,
     validateRegister,
     validatePasswordReset,
-    // validateAdminSignup,
+    validateAdminSignup,
+    validateSuperAdminCreation,
 } = require("../middleware/validation")
 
-const router = express.Router()
-
-// Public routes
+// Admin Authentication
 router.post("/admin/login", validateLogin, adminLogin)
-// router.post("/admin/signup", validateAdminSignup, adminSignup)
-router.post("/admin/signup", adminSignup)
+router.post("/admin/signup", validateAdminSignup, adminSignup)
+router.post("/admin/super-admin", validateSuperAdminCreation, createSuperAdmin)
+
+// Customer Authentication
 router.post("/customer/login", validateLogin, customerLogin)
 router.post("/customer/register", validateRegister, customerRegister)
+
+// Common Authentication
 router.post("/refresh-token", refreshToken)
+router.post("/logout", authenticateAdmin, logout)
+router.post("/customer/logout", authenticateCustomer, logout)
+
+// Password Management
 router.post("/forgot-password", forgotPassword)
 router.post("/reset-password", validatePasswordReset, resetPassword)
-
-// Protected routes
-router.post("/admin/logout", authenticateAdmin, logout)
-router.post("/customer/logout", authenticateCustomer, logout)
-router.post("/admin/change-password", authenticateAdmin, changePassword)
+router.post("/change-password", authenticateAdmin, changePassword)
 router.post("/customer/change-password", authenticateCustomer, changePassword)
 
 module.exports = router

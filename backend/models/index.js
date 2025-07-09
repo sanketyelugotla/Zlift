@@ -1,12 +1,21 @@
-// Export all models
+const AdminUser = require("./AdminUser")
+const Customer = require("./Customer")
+const Partner = require("./Patner")
+const Product = require("./Product")
+const Order = require("./Order")
+const Payment = require("./Payment")
+const Drone = require("./Drone")
+const DroneOperator = require("./DroneOperator")
+const DailySalesAnalytics = require("./DailySalesAnalytics")
+
 module.exports = {
-    Partner: require("./Patner"),
-    Product: require("./Product"),
-    Customer: require("./Customer"),
-    Order: require("./Order"),
-    Payment: require("./Payment"),
-    Drone: require("./Drone"),
-    DroneOperator: require("./DroneOperator"),
-    AdminUser: require("./AdminUser"),
-    DailySalesAnalytics: require("./DailySalesAnalytics"),
+    AdminUser,
+    Customer,
+    Partner,
+    Product,
+    Order,
+    Payment,
+    Drone,
+    DroneOperator,
+    DailySalesAnalytics,
 }

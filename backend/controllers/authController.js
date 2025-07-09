@@ -396,7 +396,6 @@ const refreshToken = async (req, res) => {
 
 // Logout - Enhanced with token blacklisting simulation
 const logout = async (req, res) => {
-    console.log("first")
     try {
         const userId = req.user.id
         const userType = req.user.userType
@@ -413,7 +412,6 @@ const logout = async (req, res) => {
             user.lastLogout = new Date()
             await user.save()
         }
-        console.log(user)
 
         // In a real implementation, you would blacklist the token
         // For now, we'll just return success

@@ -2,11 +2,11 @@ const mongoose = require("mongoose")
 
 const droneOperatorSchema = new mongoose.Schema(
     {
-        // Personal Information
+        // Basic Information
         employeeId: {
             type: String,
-            unique: true,
             required: true,
+            unique: true,
         },
 
         firstName: {
@@ -23,6 +23,7 @@ const droneOperatorSchema = new mongoose.Schema(
             type: String,
             required: true,
             unique: true,
+            lowercase: true,
         },
 
         phone: {
@@ -30,7 +31,29 @@ const droneOperatorSchema = new mongoose.Schema(
             required: true,
         },
 
-        // Certification
+        dateOfBirth: Date,
+
+        // Address
+        address: {
+            street: String,
+            city: String,
+            state: String,
+            pincode: String,
+        },
+
+        // Employment Details
+        hireDate: {
+            type: Date,
+            default: Date.now,
+        },
+
+        status: {
+            type: String,
+            enum: ["active", "inactive", "suspended"],
+            default: "active",
+        },
+
+        // Licensing & Certification
         licenseNumber: {
             type: String,
             required: true,
@@ -47,26 +70,77 @@ const droneOperatorSchema = new mongoose.Schema(
             required: true,
         },
 
-        // Work Schedule
-        status: {
-            type: String,
-            enum: ["active", "inactive", "suspended"],
-            default: "active",
+        certifications: [
+            {
+                name: String,
+                issuedBy: String,
+                issuedDate: Date,
+                expiryDate: Date,
+                certificateNumber: String,
+            },
+        ],
+
+        // Performance Metrics
+        totalFlights: {
+            type: Number,
+            default: 0,
         },
 
-        shiftStart: String, // "09:00"
-        shiftEnd: String, // "18:00"
+        successfulFlights: {
+            type: Number,
+            default: 0,
+        },
 
-        // Performance Stats
-        totalFlights: {
+        failedFlights: {
             type: Number,
             default: 0,
         },
 
         successRate: {
             type: Number,
-            default: 100.0,
+            default: 100,
         },
+
+        averageFlightTime: {
+            type: Number,
+            default: 0,
+        },
+
+        // Current Assignment
+        currentDroneId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Drone",
+        },
+
+        isOnDuty: {
+            type: Boolean,
+            default: false,
+        },
+
+        currentShift: {
+            startTime: Date,
+            endTime: Date,
+        },
+
+        // Training Records
+        trainingRecords: [
+            {
+                trainingType: String,
+                completedDate: Date,
+                instructor: String,
+                score: Number,
+                notes: String,
+            },
+        ],
+
+        // Emergency Contacts
+        emergencyContacts: [
+            {
+                name: String,
+                relationship: String,
+                phone: String,
+            },
+        ],
     },
     {
         timestamps: true,
@@ -75,6 +149,8 @@ const droneOperatorSchema = new mongoose.Schema(
 
 // Indexes
 droneOperatorSchema.index({ employeeId: 1 })
+droneOperatorSchema.index({ email: 1 })
 droneOperatorSchema.index({ status: 1 })
+droneOperatorSchema.index({ licenseExpiryDate: 1 })
 
 module.exports = mongoose.model("DroneOperator", droneOperatorSchema)

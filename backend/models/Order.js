@@ -5,11 +5,11 @@ const orderSchema = new mongoose.Schema(
         // Order Identification
         orderNumber: {
             type: String,
-            unique: true,
             required: true,
+            unique: true,
         },
 
-        // References
+        // Parties Involved
         customerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Customer",
@@ -30,8 +30,8 @@ const orderSchema = new mongoose.Schema(
                     ref: "Product",
                     required: true,
                 },
-                name: String, // snapshot at time of order
-                price: Number, // snapshot at time of order
+                name: String,
+                price: Number,
                 quantity: {
                     type: Number,
                     required: true,
@@ -42,7 +42,7 @@ const orderSchema = new mongoose.Schema(
             },
         ],
 
-        // Pricing Breakdown
+        // Pricing
         subtotal: {
             type: Number,
             required: true,
@@ -68,15 +68,6 @@ const orderSchema = new mongoose.Schema(
             required: true,
         },
 
-        // Analytics Fields
-        grossRevenue: Number, // same as totalAmount
-        commissionAmount: Number, // platform commission
-        partnerPayout: Number, // amount paid to partner
-        deliveryCost: Number, // actual delivery cost
-        transactionFees: Number, // payment gateway fees
-        netProfit: Number, // final profit
-        profitPercentage: Number, // profit margin %
-
         // Addresses
         pickupAddress: {
             street: String,
@@ -90,18 +81,19 @@ const orderSchema = new mongoose.Schema(
         },
 
         deliveryAddress: {
-            street: String,
-            city: String,
-            state: String,
-            pincode: String,
+            street: { type: String, required: true },
+            city: { type: String, required: true },
+            state: { type: String, required: true },
+            pincode: { type: String, required: true },
             coordinates: {
                 latitude: Number,
                 longitude: Number,
             },
-            deliveryInstructions: String,
         },
 
-        // Order Status
+        deliveryInstructions: String,
+
+        // Status and Timeline
         status: {
             type: String,
             enum: [
@@ -118,7 +110,6 @@ const orderSchema = new mongoose.Schema(
             default: "pending",
         },
 
-        // Timeline Tracking
         orderTimeline: [
             {
                 status: String,
@@ -127,11 +118,6 @@ const orderSchema = new mongoose.Schema(
             },
         ],
 
-        // Timing
-        estimatedPreparationTime: Number, // minutes
-        estimatedDeliveryTime: Number, // minutes
-        scheduledDeliveryTime: Date,
-
         // Timestamps
         confirmedAt: Date,
         preparedAt: Date,
@@ -139,7 +125,7 @@ const orderSchema = new mongoose.Schema(
         deliveredAt: Date,
         cancelledAt: Date,
 
-        // Drone Assignment
+        // Delivery Details
         assignedDroneId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Drone",
@@ -150,39 +136,48 @@ const orderSchema = new mongoose.Schema(
             ref: "DroneOperator",
         },
 
-        // Special Instructions
-        cookingInstructions: String,
-        deliveryInstructions: String,
+        estimatedPreparationTime: Number, // minutes
+        estimatedDeliveryTime: Number, // minutes
+        actualDeliveryTime: Number, // minutes
 
-        // Customer Feedback
+        // Financial Calculations
+        commissionAmount: {
+            type: Number,
+            default: 0,
+        },
+
+        deliveryCost: {
+            type: Number,
+            default: 0,
+        },
+
+        transactionFees: {
+            type: Number,
+            default: 0,
+        },
+
+        netProfit: {
+            type: Number,
+            default: 0,
+        },
+
+        // Additional Information
+        specialRequirements: String,
+        weatherConditions: String,
+        deliveryNotes: String,
         customerRating: {
             type: Number,
             min: 1,
             max: 5,
         },
-
-        customerReview: String,
-
-        // Order Source
-        orderSource: {
-            type: String,
-            enum: ["web", "mobile_app", "phone"],
-            default: "mobile_app",
-        },
+        customerFeedback: String,
     },
     {
         timestamps: true,
     },
 )
 
-// Indexes
-orderSchema.index({ customerId: 1 })
-orderSchema.index({ partnerId: 1 })
-orderSchema.index({ orderNumber: 1 })
-orderSchema.index({ status: 1 })
-orderSchema.index({ createdAt: -1 })
-
-// Pre-save middleware to calculate profit
+// Calculate net profit before saving
 orderSchema.pre("save", function (next) {
     if (
         this.isModified("totalAmount") ||
@@ -190,13 +185,18 @@ orderSchema.pre("save", function (next) {
         this.isModified("deliveryCost") ||
         this.isModified("transactionFees")
     ) {
-        this.grossRevenue = this.totalAmount
-        this.partnerPayout = this.totalAmount - (this.commissionAmount || 0)
-        this.netProfit =
-            this.totalAmount - (this.partnerPayout || 0) - (this.deliveryCost || 0) - (this.transactionFees || 0)
-        this.profitPercentage = this.totalAmount > 0 ? ((this.netProfit / this.totalAmount) * 100).toFixed(2) : 0
+        this.netProfit = this.totalAmount - (this.commissionAmount + this.deliveryCost + this.transactionFees)
     }
     next()
 })
+
+// Indexes
+orderSchema.index({ orderNumber: 1 })
+orderSchema.index({ customerId: 1 })
+orderSchema.index({ partnerId: 1 })
+orderSchema.index({ status: 1 })
+orderSchema.index({ createdAt: -1 })
+orderSchema.index({ assignedDroneId: 1 })
+orderSchema.index({ assignedOperatorId: 1 })
 
 module.exports = mongoose.model("Order", orderSchema)

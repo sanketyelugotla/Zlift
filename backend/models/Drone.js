@@ -2,11 +2,11 @@ const mongoose = require("mongoose")
 
 const droneSchema = new mongoose.Schema(
     {
-        // Identification
+        // Basic Information
         droneId: {
             type: String,
-            unique: true,
             required: true,
+            unique: true,
         },
 
         model: {
@@ -21,23 +21,23 @@ const droneSchema = new mongoose.Schema(
 
         // Specifications
         maxPayload: {
-            type: Number,
-            required: true, // kg
+            type: Number, // in kg
+            required: true,
         },
 
         maxRange: {
-            type: Number,
-            required: true, // km
+            type: Number, // in km
+            required: true,
         },
 
         maxFlightTime: {
-            type: Number,
-            required: true, // minutes
+            type: Number, // in minutes
+            required: true,
         },
 
         batteryCapacity: {
-            type: Number,
-            required: true, // mAh
+            type: Number, // in mAh
+            required: true,
         },
 
         // Current Status
@@ -48,9 +48,7 @@ const droneSchema = new mongoose.Schema(
         },
 
         currentBatteryLevel: {
-            type: Number,
-            min: 0,
-            max: 100,
+            type: Number, // percentage
             default: 100,
         },
 
@@ -60,7 +58,7 @@ const droneSchema = new mongoose.Schema(
             lastUpdated: Date,
         },
 
-        // Operational Stats
+        // Operational Data
         totalFlights: {
             type: Number,
             default: 0,
@@ -80,6 +78,26 @@ const droneSchema = new mongoose.Schema(
         lastMaintenanceDate: Date,
         nextMaintenanceDate: Date,
         maintenanceNotes: String,
+
+        // Registration & Compliance
+        registrationNumber: String,
+        insuranceDetails: {
+            provider: String,
+            policyNumber: String,
+            expiryDate: Date,
+        },
+
+        // Operational Limits
+        operationalAltitude: {
+            type: Number, // in meters
+            default: 120,
+        },
+
+        weatherLimitations: {
+            maxWindSpeed: { type: Number, default: 15 }, // km/h
+            minVisibility: { type: Number, default: 1000 }, // meters
+            maxRainfall: { type: Number, default: 0 }, // mm/h
+        },
     },
     {
         timestamps: true,
@@ -89,5 +107,6 @@ const droneSchema = new mongoose.Schema(
 // Indexes
 droneSchema.index({ droneId: 1 })
 droneSchema.index({ status: 1 })
+droneSchema.index({ "currentLocation.latitude": 1, "currentLocation.longitude": 1 })
 
 module.exports = mongoose.model("Drone", droneSchema)

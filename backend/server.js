@@ -73,9 +73,9 @@ const corsOptions = {
             process.env.ADMIN_DASHBOARD_URL || "http://localhost:3001",
             "http://localhost:3000",
             "http://localhost:3001",
-            "http://192.168.0.100:3000",
-            "http://192.168.0.100:19006",
-            "http://192.168.0.100:19000",
+            "http://192.168.0.105:3000",
+            "http://192.168.0.105:19006",
+            "http://192.168.0.105:19000",
             "http://localhost:8081",
         ]
 

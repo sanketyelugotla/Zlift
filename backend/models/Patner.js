@@ -6,39 +6,36 @@ const partnerSchema = new mongoose.Schema(
         businessName: {
             type: String,
             required: true,
-            trim: true,
         },
-        partnerType: {
+
+        ownerName: {
             type: String,
             required: true,
-            enum: ["restaurant", "pharmacy", "grocery", "electronics", "fashion", "books", "general"],
         },
+
         email: {
             type: String,
             required: true,
             unique: true,
             lowercase: true,
         },
+
         phone: {
             type: String,
             required: true,
         },
 
-        // Business Details
-        businessLicense: {
-            number: String,
-            expiryDate: Date,
-            documentUrl: String,
-        },
-        taxId: String,
+        alternatePhone: String,
 
-        // Owner Information
-        ownerName: {
+        // Business Details
+        partnerType: {
             type: String,
+            enum: ["restaurant", "grocery", "pharmacy", "retail"],
             required: true,
         },
-        ownerPhone: String,
-        ownerEmail: String,
+
+        businessCategory: String,
+        cuisine: [String], // For restaurants
 
         // Address
         address: {
@@ -47,71 +44,84 @@ const partnerSchema = new mongoose.Schema(
             state: { type: String, required: true },
             pincode: { type: String, required: true },
             coordinates: {
-                latitude: { type: Number, required: true },
-                longitude: { type: Number, required: true },
+                latitude: Number,
+                longitude: Number,
             },
         },
 
-        // Operational Details
-        operatingHours: {
-            monday: { open: String, close: String, isOpen: Boolean },
-            tuesday: { open: String, close: String, isOpen: Boolean },
-            wednesday: { open: String, close: String, isOpen: Boolean },
-            thursday: { open: String, close: String, isOpen: Boolean },
-            friday: { open: String, close: String, isOpen: Boolean },
-            saturday: { open: String, close: String, isOpen: Boolean },
-            sunday: { open: String, close: String, isOpen: Boolean },
+        // Business Hours
+        businessHours: {
+            monday: { open: String, close: String, isClosed: Boolean },
+            tuesday: { open: String, close: String, isClosed: Boolean },
+            wednesday: { open: String, close: String, isClosed: Boolean },
+            thursday: { open: String, close: String, isClosed: Boolean },
+            friday: { open: String, close: String, isClosed: Boolean },
+            saturday: { open: String, close: String, isClosed: Boolean },
+            sunday: { open: String, close: String, isClosed: Boolean },
         },
 
+        // Legal & Compliance
+        businessLicense: {
+            licenseNumber: String,
+            issuedDate: Date,
+            expiryDate: Date,
+            documentUrl: String,
+        },
+
+        gstNumber: String,
+        fssaiNumber: String, // For food businesses
+
+        // Financial Details
+        bankDetails: {
+            accountHolderName: String,
+            accountNumber: String,
+            ifscCode: String,
+            bankName: String,
+            branchName: String,
+        },
+
+        commissionRate: {
+            type: Number,
+            default: 15, // percentage
+        },
+
+        // Operational Details
         preparationTime: {
             type: Number,
-            default: 30, // minutes
-        },
-
-        deliveryRadius: {
-            type: Number,
-            default: 5, // km
+            default: 20, // minutes
         },
 
         minimumOrderAmount: {
             type: Number,
-            default: 0,
+            default: 100,
         },
 
-        // Status and Approval
+        deliveryRadius: {
+            type: Number,
+            default: 10, // km
+        },
+
+        // Status & Approval
         status: {
             type: String,
             enum: ["pending", "approved", "suspended", "rejected"],
             default: "pending",
         },
 
-        isActive: {
-            type: Boolean,
-            default: true,
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "AdminUser",
         },
 
-        isFeatured: {
-            type: Boolean,
-            default: false,
-        },
-
-        // Financial
-        commissionRate: {
-            type: Number,
-            default: 15.0, // percentage
-        },
+        approvedAt: Date,
+        rejectionReason: String,
 
         // Media
         logo: String,
         banner: String,
         images: [String],
 
-        // Analytics
-        totalOrders: {
-            type: Number,
-            default: 0,
-        },
-
+        // Ratings & Reviews
         averageRating: {
             type: Number,
             default: 0,
@@ -124,13 +134,42 @@ const partnerSchema = new mongoose.Schema(
             default: 0,
         },
 
-        // Metadata
-        approvedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "AdminUser",
+        // Performance Metrics
+        totalOrders: {
+            type: Number,
+            default: 0,
         },
 
-        approvedAt: Date,
+        completedOrders: {
+            type: Number,
+            default: 0,
+        },
+
+        cancelledOrders: {
+            type: Number,
+            default: 0,
+        },
+
+        totalRevenue: {
+            type: Number,
+            default: 0,
+        },
+
+        // Settings
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+
+        acceptingOrders: {
+            type: Boolean,
+            default: true,
+        },
+
+        // Additional Information
+        description: String,
+        specialties: [String],
+        tags: [String],
     },
     {
         timestamps: true,

@@ -2,6 +2,7 @@ const mongoose = require("mongoose")
 
 const paymentSchema = new mongoose.Schema(
     {
+        // Order Reference
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Order",
@@ -20,11 +21,6 @@ const paymentSchema = new mongoose.Schema(
             required: true,
         },
 
-        currency: {
-            type: String,
-            default: "INR",
-        },
-
         paymentMethod: {
             type: String,
             enum: ["card", "upi", "wallet", "cash_on_delivery", "net_banking"],
@@ -37,34 +33,44 @@ const paymentSchema = new mongoose.Schema(
             default: "pending",
         },
 
-        // Gateway Details
+        // Gateway Information
         gatewayTransactionId: String,
-        gatewayName: String, // razorpay, stripe, etc.
         gatewayResponse: mongoose.Schema.Types.Mixed,
 
-        // Settlement for Partners
-        settlementStatus: {
-            type: String,
-            enum: ["pending", "processed", "completed"],
-            default: "pending",
-        },
-
-        settlementAmount: Number, // amount to be paid to partner
-        settlementDate: Date,
-
-        // Transaction Fees
+        // Processing Details
+        processedAt: Date,
         transactionFees: {
             type: Number,
             default: 0,
         },
 
-        // Refund Details
-        refundAmount: Number,
+        // Refund Information
+        refundAmount: {
+            type: Number,
+            default: 0,
+        },
+
         refundReason: String,
         refundedAt: Date,
 
-        // Timestamps
-        processedAt: Date,
+        // Settlement Information
+        settlementStatus: {
+            type: String,
+            enum: ["pending", "processed", "failed"],
+            default: "pending",
+        },
+
+        settlementDate: Date,
+        settlementAmount: Number,
+
+        // Additional Information
+        currency: {
+            type: String,
+            default: "INR",
+        },
+
+        paymentDescription: String,
+        failureReason: String,
     },
     {
         timestamps: true,
@@ -75,6 +81,7 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ orderId: 1 })
 paymentSchema.index({ customerId: 1 })
 paymentSchema.index({ paymentStatus: 1 })
+paymentSchema.index({ gatewayTransactionId: 1 })
 paymentSchema.index({ settlementStatus: 1 })
 
 module.exports = mongoose.model("Payment", paymentSchema)

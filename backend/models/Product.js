@@ -2,17 +2,10 @@ const mongoose = require("mongoose")
 
 const productSchema = new mongoose.Schema(
     {
-        partnerId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Partner",
-            required: true,
-        },
-
         // Basic Information
         name: {
             type: String,
             required: true,
-            trim: true,
         },
 
         description: String,
@@ -24,6 +17,13 @@ const productSchema = new mongoose.Schema(
 
         subcategory: String,
 
+        // Partner Reference
+        partnerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Partner",
+            required: true,
+        },
+
         // Pricing
         price: {
             type: Number,
@@ -31,61 +31,82 @@ const productSchema = new mongoose.Schema(
             min: 0,
         },
 
-        discountedPrice: {
+        originalPrice: Number,
+        discountPercentage: {
             type: Number,
+            default: 0,
+            min: 0,
+            max: 100,
+        },
+
+        // Inventory
+        stock: {
+            type: Number,
+            default: 0,
             min: 0,
         },
 
-        // Product Details
-        attributes: {
-            weight: Number, // grams
-            dimensions: {
-                length: Number,
-                width: Number,
-                height: Number,
-            },
-            isVegetarian: Boolean,
-            isVegan: Boolean,
-            isGlutenFree: Boolean,
-            spiceLevel: {
-                type: Number,
-                min: 0,
-                max: 5,
-            },
-            calories: Number,
-            expiryDate: Date, // for medicines/perishables
-            batchNumber: String, // for medicines
-            requiresPrescription: Boolean, // for medicines
-            ageRestricted: Boolean, // for alcohol, etc.
-            temperatureControlled: Boolean, // cold chain items
-            fragile: Boolean,
-        },
-
-        // Availability
         isAvailable: {
             type: Boolean,
             default: true,
         },
 
-        stock: {
-            type: Number,
-            default: 0,
-        },
-
-        preparationTime: {
-            type: Number,
-            default: 15, // minutes
-        },
-
         // Media
         images: [String],
+        thumbnail: String,
 
-        // Analytics
-        totalOrders: {
-            type: Number,
-            default: 0,
+        // Product Details
+        weight: Number, // in grams
+        dimensions: {
+            length: Number,
+            width: Number,
+            height: Number,
         },
 
+        // Nutritional Information (for food items)
+        nutritionalInfo: {
+            calories: Number,
+            protein: Number,
+            carbs: Number,
+            fat: Number,
+            fiber: Number,
+            sugar: Number,
+        },
+
+        // Additional Information
+        ingredients: [String],
+        allergens: [String],
+        tags: [String],
+
+        // Variants (size, color, etc.)
+        variants: [
+            {
+                name: String,
+                value: String,
+                priceModifier: Number,
+                stockModifier: Number,
+            },
+        ],
+
+        // Customization Options
+        customizations: [
+            {
+                name: String,
+                type: {
+                    type: String,
+                    enum: ["single", "multiple"],
+                },
+                required: Boolean,
+                options: [
+                    {
+                        name: String,
+                        price: Number,
+                    },
+                ],
+            },
+        ],
+
+        // Ratings & Reviews
         averageRating: {
             type: Number,
             default: 0,
@@ -98,8 +119,46 @@ const productSchema = new mongoose.Schema(
             default: 0,
         },
 
-        // SEO
-        tags: [String],
+        // Performance Metrics
+        totalOrders: {
+            type: Number,
+            default: 0,
+        },
+
+        totalRevenue: {
+            type: Number,
+            default: 0,
+        },
+
+        // SEO & Search
+        searchKeywords: [String],
+        isPopular: {
+            type: Boolean,
+            default: false,
+        },
+
+        isFeatured: {
+            type: Boolean,
+            default: false,
+        },
+
+        // Status
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+
+        // Preparation Time
+        preparationTime: {
+            type: Number,
+            default: 15, // minutes
+        },
+
+        // Special Attributes
+        isVegetarian: Boolean,
+        isVegan: Boolean,
+        isGlutenFree: Boolean,
+        isSpicy: Boolean,
     },
     {
         timestamps: true,
@@ -109,7 +168,8 @@ const productSchema = new mongoose.Schema(
 // Indexes
 productSchema.index({ partnerId: 1 })
 productSchema.index({ category: 1 })
-productSchema.index({ isAvailable: 1 })
 productSchema.index({ name: "text", description: "text", tags: "text" })
+productSchema.index({ isAvailable: 1 })
+productSchema.index({ price: 1 })
 
 module.exports = mongoose.model("Product", productSchema)
