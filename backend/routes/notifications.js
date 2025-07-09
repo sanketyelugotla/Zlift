@@ -7,7 +7,7 @@ const {
     deleteNotification,
     sendBulkNotification,
     getNotificationStats,
-} = require("../controllers/notificationController")
+} = require("../controllers/notificationsController")
 const { authenticateAdmin, checkPermission } = require("../middleware/auth")
 const { validateNotification } = require("../middleware/validation")
 
