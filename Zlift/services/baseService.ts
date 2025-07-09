@@ -1,4 +1,4 @@
-interface ApiResponse<T = any> {
+export interface ApiResponse<T = any> {
     success: boolean
     message: string
     data?: T
@@ -32,11 +32,9 @@ class BaseService {
     private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
         try {
             const data = await response.json()
-
             if (!response.ok) {
                 throw new Error(data.message || `HTTP error! status: ${response.status}`)
             }
-
             return data
         } catch (error) {
             console.error("API Response Error:", error)
@@ -47,12 +45,10 @@ class BaseService {
     async get<T>(endpoint: string): Promise<ApiResponse<T>> {
         try {
             console.log(`Making GET request to: ${this.baseURL}${endpoint}`)
-
             const response = await fetch(`${this.baseURL}${endpoint}`, {
                 method: "GET",
                 headers: this.getHeaders(),
             })
-
             return await this.handleResponse<T>(response)
         } catch (error: any) {
             console.error(`GET ${endpoint} failed:`, error)
@@ -64,13 +60,11 @@ class BaseService {
         try {
             console.log(`Making POST request to: ${this.baseURL}${endpoint}`)
             console.log("Request data:", data)
-
             const response = await fetch(`${this.baseURL}${endpoint}`, {
                 method: "POST",
                 headers: this.getHeaders(),
                 body: data ? JSON.stringify(data) : undefined,
             })
-
             return await this.handleResponse<T>(response)
         } catch (error: any) {
             console.error(`POST ${endpoint} failed:`, error)
@@ -81,13 +75,11 @@ class BaseService {
     async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
         try {
             console.log(`Making PUT request to: ${this.baseURL}${endpoint}`)
-
             const response = await fetch(`${this.baseURL}${endpoint}`, {
                 method: "PUT",
                 headers: this.getHeaders(),
                 body: data ? JSON.stringify(data) : undefined,
             })
-
             return await this.handleResponse<T>(response)
         } catch (error: any) {
             console.error(`PUT ${endpoint} failed:`, error)
@@ -98,12 +90,10 @@ class BaseService {
     async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
         try {
             console.log(`Making DELETE request to: ${this.baseURL}${endpoint}`)
-
             const response = await fetch(`${this.baseURL}${endpoint}`, {
                 method: "DELETE",
                 headers: this.getHeaders(),
             })
-
             return await this.handleResponse<T>(response)
         } catch (error: any) {
             console.error(`DELETE ${endpoint} failed:`, error)
@@ -113,4 +103,3 @@ class BaseService {
 }
 
 export default BaseService
-  

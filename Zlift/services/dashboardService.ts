@@ -48,7 +48,6 @@ class DashboardService extends BaseService {
             return response
         } catch (error: any) {
             console.error("Failed to fetch dashboard stats:", error)
-
             // Return demo data for development
             return {
                 success: true,
@@ -78,7 +77,6 @@ class DashboardService extends BaseService {
             return response
         } catch (error: any) {
             console.error("Failed to fetch recent orders:", error)
-
             // Return demo data for development
             return {
                 success: true,
@@ -140,7 +138,6 @@ class DashboardService extends BaseService {
             return response
         } catch (error: any) {
             console.error("Failed to fetch analytics data:", error)
-
             // Return demo data for development
             return {
                 success: true,
@@ -177,7 +174,6 @@ class DashboardService extends BaseService {
             return response
         } catch (error: any) {
             console.error("Failed to fetch partner stats:", error)
-
             // Return demo data for development
             return {
                 success: true,
@@ -202,7 +198,6 @@ class DashboardService extends BaseService {
             return response
         } catch (error: any) {
             console.error("Failed to fetch drone stats:", error)
-
             // Return demo data for development
             return {
                 success: true,
@@ -217,6 +212,202 @@ class DashboardService extends BaseService {
                 },
             }
         }
+    }
+
+    // Super Admin specific methods
+    async getSuperAdminStats(): Promise<any> {
+        try {
+            const response = await this.get("/dashboard/super-admin/stats")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch super admin stats:", error)
+            return {
+                success: true,
+                message: "Super admin stats retrieved (Demo Mode)",
+                data: {
+                    totalPartners: 89,
+                    activeDrones: 23,
+                    todayRevenue: 12450.75,
+                    totalOrders: 1247,
+                },
+            }
+        }
+    }
+
+    async getSuperAdminAnalytics(): Promise<any> {
+        try {
+            const response = await this.get("/dashboard/super-admin/analytics")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch super admin analytics:", error)
+            return {
+                success: true,
+                message: "Super admin analytics retrieved (Demo Mode)",
+                data: {
+                    perPartnerRevenue: [
+                        { name: "Pizza Palace", revenue: 15420.5 },
+                        { name: "Burger Barn", revenue: 12350.25 },
+                        { name: "Sushi Spot", revenue: 18750.75 },
+                        { name: "Taco Time", revenue: 9875.0 },
+                        { name: "Coffee Corner", revenue: 6420.3 },
+                    ],
+                    avgOrderCost: 45.75,
+                    avgOrdersPerDay: 85.5,
+                    avgProfitPerDay: 1250.8,
+                },
+            }
+        }
+    }
+
+    // Partner Manager specific methods
+    async getPartnerManagerStats(): Promise<any> {
+        try {
+            const response = await this.get("/dashboard/partner-manager/stats")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch partner manager stats:", error)
+            return {
+                success: true,
+                message: "Partner manager stats retrieved (Demo Mode)",
+                data: {
+                    totalOrders: 234,
+                    successfulOrders: 198,
+                    cancelledOrders: 12,
+                    totalItems: 45,
+                },
+            }
+        }
+    }
+
+    async getPartnerManagerAnalytics(): Promise<any> {
+        try {
+            const response = await this.get("/dashboard/partner-manager/analytics")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch partner manager analytics:", error)
+            return {
+                success: true,
+                message: "Partner manager analytics retrieved (Demo Mode)",
+                data: {
+                    totalProfit: 8450.75,
+                    perDayProfit: 285.5,
+                    todayOrders: 12,
+                    todayRevenue: 567.25,
+                },
+            }
+        }
+    }
+
+    // Inventory management
+    async getInventoryItems(): Promise<any> {
+        try {
+            const response = await this.get("/dashboard/inventory")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch inventory items:", error)
+            return {
+                success: true,
+                message: "Inventory items retrieved (Demo Mode)",
+                data: [
+                    {
+                        id: "1",
+                        name: "Margherita Pizza",
+                        category: "Pizza",
+                        price: 12.99,
+                        stock: 25,
+                        status: "available",
+                    },
+                    {
+                        id: "2",
+                        name: "Chicken Burger",
+                        category: "Burger",
+                        price: 8.99,
+                        stock: 5,
+                        status: "low_stock",
+                    },
+                    {
+                        id: "3",
+                        name: "California Roll",
+                        category: "Sushi",
+                        price: 15.99,
+                        stock: 0,
+                        status: "out_of_stock",
+                    },
+                    {
+                        id: "4",
+                        name: "Beef Tacos",
+                        category: "Mexican",
+                        price: 9.99,
+                        stock: 18,
+                        status: "available",
+                    },
+                    {
+                        id: "5",
+                        name: "Cappuccino",
+                        category: "Coffee",
+                        price: 4.99,
+                        stock: 50,
+                        status: "available",
+                    },
+                ],
+            }
+        }
+    }
+
+    async addInventoryItem(item: {
+        name: string
+        category: string
+        price: number
+        stock: number
+        description?: string
+    }): Promise<any> {
+        try {
+            const response = await this.post("/dashboard/inventory", item)
+            return response
+        } catch (error: any) {
+            console.error("Failed to add inventory item:", error)
+            throw error
+        }
+    }
+
+    async updateInventoryItem(
+        id: string,
+        item: {
+            name?: string
+            category?: string
+            price?: number
+            stock?: number
+            description?: string
+        },
+    ): Promise<any> {
+        try {
+            const response = await this.put(`/dashboard/inventory/${id}`, item)
+            return response
+        } catch (error: any) {
+            console.error("Failed to update inventory item:", error)
+            throw error
+        }
+    }
+
+    async deleteInventoryItem(id: string): Promise<any> {
+        try {
+            const response = await this.delete(`/dashboard/inventory/${id}`)
+            return response
+        } catch (error: any) {
+            console.error("Failed to delete inventory item:", error)
+            throw error
+        }
+    }
+
+    async getSystemHealth(): Promise<any> {
+        return this.get("/dashboard/health")
+    }
+
+    async getActivityFeed(params?: {
+        limit?: number
+        offset?: number
+    }): Promise<any> {
+        return this.get("/dashboard/activity")
     }
 }
 

@@ -49,27 +49,52 @@ class AuthService extends BaseService {
             console.error("Login failed:", error)
 
             // Return demo data for development
-            return {
-                success: true,
-                message: "Login successful (Demo Mode)",
-                data: {
-                    token: "demo-token-12345",
-                    refreshToken: "demo-refresh-token-12345",
-                    user: {
-                        id: "demo-user-id",
-                        name: "Demo Partner Manager",
-                        email: email,
-                        role: "partner_manager",
-                        permissions: [
-                            { module: "dashboard", actions: ["read"] },
-                            { module: "partners", actions: ["read", "write", "update"] },
-                            { module: "products", actions: ["read", "write", "update"] },
-                            { module: "orders", actions: ["read", "update"] },
-                            { module: "analytics", actions: ["read"] },
-                        ],
+            if (email === "admin@dronedelivery.com" && password === "admin123") {
+                return {
+                    success: true,
+                    message: "Login successful (Demo Mode)",
+                    data: {
+                        token: "demo-token-12345",
+                        refreshToken: "demo-refresh-token-12345",
+                        user: {
+                            id: "demo-user-id",
+                            name: "Demo Super Admin",
+                            email: email,
+                            role: "super_admin",
+                            permissions: [
+                                { module: "dashboard", actions: ["read"] },
+                                { module: "partners", actions: ["read", "write", "update", "delete"] },
+                                { module: "analytics", actions: ["read"] },
+                                { module: "admin", actions: ["read", "write", "update", "delete"] },
+                            ],
+                        },
                     },
-                },
+                }
+            } else if (email === "partner@dronedelivery.com" && password === "partner123") {
+                return {
+                    success: true,
+                    message: "Login successful (Demo Mode)",
+                    data: {
+                        token: "demo-token-partner-12345",
+                        refreshToken: "demo-refresh-token-partner-12345",
+                        user: {
+                            id: "demo-partner-id",
+                            name: "Demo Partner Manager",
+                            email: email,
+                            role: "partner_manager",
+                            permissions: [
+                                { module: "dashboard", actions: ["read"] },
+                                { module: "partners", actions: ["read", "write", "update"] },
+                                { module: "products", actions: ["read", "write", "update"] },
+                                { module: "orders", actions: ["read", "update"] },
+                                { module: "analytics", actions: ["read"] },
+                            ],
+                        },
+                    },
+                }
             }
+
+            throw new Error("Invalid credentials")
         }
     }
 

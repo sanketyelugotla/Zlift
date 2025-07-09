@@ -1,11 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { StyleSheet, ScrollView, RefreshControl, View, Text } from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { Ionicons } from "@expo/vector-icons"
-import { useAuth } from "../../contexts/AuthContext"
-import { dashboardService } from "../../services/dashboardService"
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, Alert } from "react-native"
+import { useAuth } from "@/contexts/AuthContext"
+import { dashboardService } from "@/services/dashboardService"
 
 interface SuperAdminAnalytics {
     perPartnerRevenue: Array<{ name: string; revenue: number }>
@@ -21,25 +19,16 @@ interface PartnerManagerAnalytics {
     todayRevenue: number
 }
 
+const { width } = Dimensions.get("window")
+
 export default function AnalyticsScreen() {
-    const [superAdminAnalytics, setSuperAdminAnalytics] = useState<SuperAdminAnalytics>({
-        perPartnerRevenue: [],
-        avgOrderCost: 0,
-        avgOrdersPerDay: 0,
-        avgProfitPerDay: 0,
-    })
-
-    const [partnerAnalytics, setPartnerAnalytics] = useState<PartnerManagerAnalytics>({
-        totalProfit: 0,
-        perDayProfit: 0,
-        todayOrders: 0,
-        todayRevenue: 0,
-    })
-
-    const [refreshing, setRefreshing] = useState(false)
-    const [loading, setLoading] = useState(true)
-
     const { user } = useAuth()
+    const [analytics, setAnalytics] = useState<SuperAdminAnalytics | PartnerManagerAnalytics | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
+
+    const isSuperAdmin = user?.role === "super_admin"
+    const isPartnerManager = user?.role === "partner_manager"
 
     useEffect(() => {
         loadAnalyticsData()
@@ -47,21 +36,23 @@ export default function AnalyticsScreen() {
 
     const loadAnalyticsData = async () => {
         try {
-            if (user?.role === "super_admin") {
-                const response = await dashboardService.getSuperAdminAnalytics()
-                if (response.success) {
-                    setSuperAdminAnalytics(response.data)
-                }
-            } else {
-                const response = await dashboardService.getPartnerManagerAnalytics()
-                if (response.success) {
-                    setPartnerAnalytics(response.data)
-                }
+            setIsLoading(true)
+
+            let response
+            if (isSuperAdmin) {
+                response = await dashboardService.getSuperAdminAnalytics()
+            } else if (isPartnerManager) {
+                response = await dashboardService.getPartnerManagerAnalytics()
+            }
+
+            if (response?.success) {
+                setAnalytics(response.data)
             }
         } catch (error) {
             console.error("Failed to load analytics data:", error)
+            Alert.alert("Error", "Failed to load analytics data")
         } finally {
-            setLoading(false)
+            setIsLoading(false)
         }
     }
 
@@ -75,130 +66,97 @@ export default function AnalyticsScreen() {
         return `$${amount.toFixed(2)}`
     }
 
-    // Super Admin Analytics
-    if (user?.role === "super_admin") {
+    const renderRevenueBar = (partner: { name: string; revenue: number }, maxRevenue: number) => {
+        const barWidth = (partner.revenue / maxRevenue) * (width - 80)
+
         return (
-            <ScrollView
-                style={styles.container}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {/* Header */}
-                <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
-                    <View style={styles.headerContent}>
-                        <Text style={styles.headerTitle}>Analytics Dashboard</Text>
-                        <Text style={styles.headerSubtitle}>Super Admin View</Text>
-                    </View>
-                </LinearGradient>
-
-                {/* Key Metrics */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statsRow}>
-                        <View style={[styles.statCard, styles.statCardBlue]}>
-                            <Ionicons name="trending-up-outline" size={30} color="#667eea" />
-                            <Text style={styles.statNumber}>{formatCurrency(superAdminAnalytics.avgOrderCost)}</Text>
-                            <Text style={styles.statLabel}>Avg Order Cost</Text>
-                        </View>
-                        <View style={[styles.statCard, styles.statCardGreen]}>
-                            <Ionicons name="receipt-outline" size={30} color="#10B981" />
-                            <Text style={styles.statNumber}>{superAdminAnalytics.avgOrdersPerDay.toFixed(1)}</Text>
-                            <Text style={styles.statLabel}>Avg Orders/Day</Text>
-                        </View>
-                    </View>
-                    <View style={styles.statsRow}>
-                        <View style={[styles.statCard, styles.statCardOrange]}>
-                            <Ionicons name="cash-outline" size={30} color="#F59E0B" />
-                            <Text style={styles.statNumber}>{formatCurrency(superAdminAnalytics.avgProfitPerDay)}</Text>
-                            <Text style={styles.statLabel}>Avg Profit/Day</Text>
-                        </View>
-                    </View>
+            <View key={partner.name} style={styles.revenueBarContainer}>
+                <Text style={styles.partnerName}>{partner.name}</Text>
+                <View style={styles.barBackground}>
+                    <View style={[styles.bar, { width: barWidth }]} />
                 </View>
-
-                {/* Per Partner Revenue */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Per Partner Revenue</Text>
-                    <View style={styles.partnerRevenueContainer}>
-                        {superAdminAnalytics.perPartnerRevenue.map((partner, index) => (
-                            <View key={index} style={styles.partnerRevenueCard}>
-                                <View style={styles.partnerInfo}>
-                                    <Text style={styles.partnerName}>{partner.name}</Text>
-                                    <Text style={styles.partnerRevenue}>{formatCurrency(partner.revenue)}</Text>
-                                </View>
-                                <View style={styles.revenueBar}>
-                                    <View
-                                        style={[
-                                            styles.revenueBarFill,
-                                            {
-                                                width: `${(partner.revenue / Math.max(...superAdminAnalytics.perPartnerRevenue.map((p) => p.revenue))) * 100}%`,
-                                            },
-                                        ]}
-                                    />
-                                </View>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-            </ScrollView>
+                <Text style={styles.revenueAmount}>{formatCurrency(partner.revenue)}</Text>
+            </View>
         )
     }
 
-    // Partner Manager Analytics
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading analytics...</Text>
+            </View>
+        )
+    }
+
     return (
         <ScrollView
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
             {/* Header */}
-            <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Analytics Dashboard</Text>
-                    <Text style={styles.headerSubtitle}>Partner Manager View</Text>
-                </View>
-            </LinearGradient>
-
-            {/* Partner Analytics */}
-            <View style={styles.statsContainer}>
-                <View style={styles.statsRow}>
-                    <View style={[styles.statCard, styles.statCardBlue]}>
-                        <Ionicons name="trending-up-outline" size={30} color="#667eea" />
-                        <Text style={styles.statNumber}>{formatCurrency(partnerAnalytics.totalProfit)}</Text>
-                        <Text style={styles.statLabel}>Total Profit</Text>
-                    </View>
-                    <View style={[styles.statCard, styles.statCardGreen]}>
-                        <Ionicons name="calendar-outline" size={30} color="#10B981" />
-                        <Text style={styles.statNumber}>{formatCurrency(partnerAnalytics.perDayProfit)}</Text>
-                        <Text style={styles.statLabel}>Per Day Profit</Text>
-                    </View>
-                </View>
-                <View style={styles.statsRow}>
-                    <View style={[styles.statCard, styles.statCardOrange]}>
-                        <Ionicons name="receipt-outline" size={30} color="#F59E0B" />
-                        <Text style={styles.statNumber}>{partnerAnalytics.todayOrders}</Text>
-                        <Text style={styles.statLabel}>Today Orders</Text>
-                    </View>
-                    <View style={[styles.statCard, styles.statCardPurple]}>
-                        <Ionicons name="cash-outline" size={30} color="#8B5CF6" />
-                        <Text style={styles.statNumber}>{formatCurrency(partnerAnalytics.todayRevenue)}</Text>
-                        <Text style={styles.statLabel}>Today Revenue</Text>
-                    </View>
-                </View>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>{isSuperAdmin ? "Super Admin Analytics" : "Partner Analytics"}</Text>
             </View>
 
-            {/* Performance Insights */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Performance Insights</Text>
-                <View style={styles.insightsContainer}>
-                    <View style={styles.insightCard}>
-                        <Ionicons name="trending-up" size={24} color="#10B981" />
-                        <Text style={styles.insightText}>Your daily profit has increased by 15% this week</Text>
+            {isSuperAdmin && analytics && "perPartnerRevenue" in analytics ? (
+                <>
+                    {/* Per Partner Revenue */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Per Partner Revenue</Text>
+                        {analytics.perPartnerRevenue.length > 0 ? (
+                            <>
+                                {analytics.perPartnerRevenue.map((partner) =>
+                                    renderRevenueBar(partner, Math.max(...analytics.perPartnerRevenue.map((p) => p.revenue))),
+                                )}
+                            </>
+                        ) : (
+                            <Text style={styles.emptyText}>No revenue data available</Text>
+                        )}
                     </View>
-                    <View style={styles.insightCard}>
-                        <Ionicons name="star" size={24} color="#F59E0B" />
-                        <Text style={styles.insightText}>
-                            You have {partnerAnalytics.todayOrders} orders today, 20% above average
-                        </Text>
+
+                    {/* Key Metrics */}
+                    <View style={styles.metricsContainer}>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{formatCurrency(analytics.avgOrderCost)}</Text>
+                            <Text style={styles.metricLabel}>Avg Order Cost</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{analytics.avgOrdersPerDay.toFixed(1)}</Text>
+                            <Text style={styles.metricLabel}>Avg Orders/Day</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{formatCurrency(analytics.avgProfitPerDay)}</Text>
+                            <Text style={styles.metricLabel}>Avg Profit/Day</Text>
+                        </View>
                     </View>
+                </>
+            ) : isPartnerManager && analytics && "totalProfit" in analytics ? (
+                <>
+                    {/* Partner Manager Analytics */}
+                    <View style={styles.metricsContainer}>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{formatCurrency(analytics.totalProfit)}</Text>
+                            <Text style={styles.metricLabel}>Total Profit</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{formatCurrency(analytics.perDayProfit)}</Text>
+                            <Text style={styles.metricLabel}>Per Day Profit</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{analytics.todayOrders}</Text>
+                            <Text style={styles.metricLabel}>Today Orders</Text>
+                        </View>
+                        <View style={styles.metricCard}>
+                            <Text style={styles.metricNumber}>{formatCurrency(analytics.todayRevenue)}</Text>
+                            <Text style={styles.metricLabel}>Today Revenue</Text>
+                        </View>
+                    </View>
+                </>
+            ) : (
+                <View style={styles.section}>
+                    <Text style={styles.emptyText}>No analytics data available</Text>
                 </View>
-            </View>
+            )}
         </ScrollView>
     )
 }
@@ -208,139 +166,104 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#f5f5f5",
     },
-    header: {
-        paddingTop: 60,
-        paddingBottom: 30,
-        paddingHorizontal: 20,
-    },
-    headerContent: {
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "#f5f5f5",
+    },
+    loadingText: {
+        fontSize: 16,
+        color: "#666",
+    },
+    header: {
+        backgroundColor: "#fff",
+        padding: 20,
+        paddingTop: 60,
+        borderBottomWidth: 1,
+        borderBottomColor: "#e0e0e0",
     },
     headerTitle: {
         fontSize: 24,
         fontWeight: "bold",
-        color: "white",
-    },
-    headerSubtitle: {
-        fontSize: 16,
-        color: "rgba(255, 255, 255, 0.8)",
-        marginTop: 5,
-    },
-    statsContainer: {
-        padding: 20,
-        marginTop: -20,
-    },
-    statsRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 15,
-    },
-    statCard: {
-        flex: 1,
-        backgroundColor: "white",
-        borderRadius: 15,
-        padding: 20,
-        alignItems: "center",
-        marginHorizontal: 5,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    statCardBlue: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#667eea",
-    },
-    statCardGreen: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#10B981",
-    },
-    statCardOrange: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#F59E0B",
-    },
-    statCardPurple: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#8B5CF6",
-    },
-    statNumber: {
-        fontSize: 24,
-        fontWeight: "bold",
         color: "#333",
-        marginTop: 10,
-    },
-    statLabel: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 5,
-        textAlign: "center",
     },
     section: {
-        padding: 20,
+        margin: 16,
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: "bold",
         color: "#333",
-        marginBottom: 15,
+        marginBottom: 16,
     },
-    partnerRevenueContainer: {
-        backgroundColor: "white",
-        borderRadius: 12,
-        overflow: "hidden",
-    },
-    partnerRevenueCard: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-    partnerInfo: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 10,
+    revenueBarContainer: {
+        marginBottom: 16,
     },
     partnerName: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: "600",
         color: "#333",
+        marginBottom: 4,
     },
-    partnerRevenue: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: "#10B981",
+    barBackground: {
+        height: 20,
+        backgroundColor: "#e0e0e0",
+        borderRadius: 10,
+        marginBottom: 4,
     },
-    revenueBar: {
-        height: 6,
-        backgroundColor: "#f0f0f0",
-        borderRadius: 3,
-        overflow: "hidden",
+    bar: {
+        height: 20,
+        backgroundColor: "#007AFF",
+        borderRadius: 10,
     },
-    revenueBarFill: {
-        height: "100%",
-        backgroundColor: "#667eea",
-        borderRadius: 3,
+    revenueAmount: {
+        fontSize: 12,
+        color: "#666",
+        textAlign: "right",
     },
-    insightsContainer: {
-        backgroundColor: "white",
-        borderRadius: 12,
-        overflow: "hidden",
-    },
-    insightCard: {
+    metricsContainer: {
         flexDirection: "row",
-        alignItems: "center",
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
+        flexWrap: "wrap",
+        padding: 16,
+        gap: 16,
     },
-    insightText: {
+    metricCard: {
+        backgroundColor: "#fff",
+        padding: 20,
+        borderRadius: 8,
+        flex: 1,
+        minWidth: "45%",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    metricNumber: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#007AFF",
+    },
+    metricLabel: {
         fontSize: 14,
         color: "#666",
-        marginLeft: 12,
-        flex: 1,
+        marginTop: 4,
+        textAlign: "center",
+    },
+    emptyText: {
+        textAlign: "center",
+        color: "#666",
+        fontSize: 16,
+        padding: 20,
     },
 })
