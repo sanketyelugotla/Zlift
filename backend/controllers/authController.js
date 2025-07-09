@@ -7,6 +7,11 @@ const generateToken = (id, role, userType) => {
     return jwt.sign({ id, role, userType }, process.env.JWT_SECRET, { expiresIn: "30d" })
 }
 
+// Generate Refresh Token
+const generateRefreshToken = (id, role, userType) => {
+    return jwt.sign({ id, role, userType }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" })
+}
+
 // Admin Login
 const adminLogin = async (req, res) => {
     try {
@@ -34,19 +39,22 @@ const adminLogin = async (req, res) => {
         admin.lastLogin = new Date()
         await admin.save()
 
-        // Generate token
+        // Generate tokens
         const token = generateToken(admin._id, admin.role, "admin")
+        const refreshToken = generateRefreshToken(admin._id, admin.role, "admin")
 
         res.json({
             success: true,
             message: "Login successful",
             data: {
                 token,
+                refreshToken,
                 user: {
                     id: admin._id,
                     name: `${admin.firstName} ${admin.lastName}`,
                     email: admin.email,
                     role: admin.role,
+                    permissions: admin.permissions,
                 },
             },
         })
@@ -59,10 +67,10 @@ const adminLogin = async (req, res) => {
     }
 }
 
-// Admin Signup
+// Admin Signup - Creates partner_manager by default
 const adminSignup = async (req, res) => {
     try {
-        const { firstName, lastName, email, password, phone, role = "operations_manager" } = req.body
+        const { firstName, lastName, email, password, phone, role = "partner_manager" } = req.body
 
         // Check if admin already exists
         const existingAdmin = await AdminUser.findOne({ email })
@@ -76,6 +84,36 @@ const adminSignup = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
+        // Define permissions based on role
+        let permissions = []
+
+        if (role === "partner_manager") {
+            permissions = [
+                { module: "dashboard", actions: ["read"] },
+                { module: "partners", actions: ["read", "write", "update"] },
+                { module: "products", actions: ["read", "write", "update"] },
+                { module: "orders", actions: ["read", "update"] },
+                { module: "analytics", actions: ["read"] },
+                { module: "reports", actions: ["read"] },
+            ]
+        } else if (role === "operations_manager") {
+            permissions = [
+                { module: "dashboard", actions: ["read"] },
+                { module: "orders", actions: ["read", "write", "update", "delete"] },
+                { module: "drones", actions: ["read", "write", "update"] },
+                { module: "operators", actions: ["read", "write"] },
+                { module: "customers", actions: ["read"] },
+                { module: "analytics", actions: ["read"] },
+            ]
+        } else if (role === "customer_support") {
+            permissions = [
+                { module: "dashboard", actions: ["read"] },
+                { module: "customers", actions: ["read", "write", "update"] },
+                { module: "orders", actions: ["read", "update"] },
+                { module: "support", actions: ["read", "write"] },
+            ]
+        }
+
         // Create admin user
         const admin = new AdminUser({
             firstName,
@@ -84,12 +122,7 @@ const adminSignup = async (req, res) => {
             phone,
             password: hashedPassword,
             role,
-            permissions: [
-                { module: "dashboard", actions: ["read"] },
-                { module: "orders", actions: ["read", "write"] },
-                { module: "partners", actions: ["read"] },
-                { module: "customers", actions: ["read"] },
-            ],
+            permissions,
         })
 
         await admin.save()
@@ -103,11 +136,95 @@ const adminSignup = async (req, res) => {
                     name: `${admin.firstName} ${admin.lastName}`,
                     email: admin.email,
                     role: admin.role,
+                    permissions: admin.permissions,
                 },
             },
         })
     } catch (error) {
-        console.log(error)
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message,
+        })
+    }
+}
+
+// Create Super Admin - Only for initial setup
+const createSuperAdmin = async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, phone, secretKey } = req.body
+
+        // Check secret key for super admin creation
+        if (secretKey !== process.env.SUPER_ADMIN_SECRET) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid secret key",
+            })
+        }
+
+        // Check if super admin already exists
+        const existingSuperAdmin = await AdminUser.findOne({ role: "super_admin" })
+        if (existingSuperAdmin) {
+            return res.status(400).json({
+                success: false,
+                message: "Super admin already exists",
+            })
+        }
+
+        // Check if admin already exists with this email
+        const existingAdmin = await AdminUser.findOne({ email })
+        if (existingAdmin) {
+            return res.status(400).json({
+                success: false,
+                message: "Admin user already exists with this email",
+            })
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12)
+
+        // Super admin has all permissions
+        const permissions = [
+            { module: "dashboard", actions: ["read"] },
+            { module: "partners", actions: ["read", "write", "update", "delete"] },
+            { module: "products", actions: ["read", "write", "update", "delete"] },
+            { module: "customers", actions: ["read", "write", "update", "delete"] },
+            { module: "orders", actions: ["read", "write", "update", "delete"] },
+            { module: "payments", actions: ["read", "write", "update"] },
+            { module: "drones", actions: ["read", "write", "update", "delete"] },
+            { module: "operators", actions: ["read", "write", "update", "delete"] },
+            { module: "admin", actions: ["read", "write", "update", "delete"] },
+            { module: "analytics", actions: ["read"] },
+            { module: "reports", actions: ["read"] },
+            { module: "settings", actions: ["read", "write", "update"] },
+        ]
+
+        // Create super admin user
+        const superAdmin = new AdminUser({
+            firstName,
+            lastName,
+            email,
+            phone,
+            password: hashedPassword,
+            role: "super_admin",
+            permissions,
+        })
+
+        await superAdmin.save()
+
+        res.status(201).json({
+            success: true,
+            message: "Super admin account created successfully",
+            data: {
+                user: {
+                    id: superAdmin._id,
+                    name: `${superAdmin.firstName} ${superAdmin.lastName}`,
+                    email: superAdmin.email,
+                    role: superAdmin.role,
+                },
+            },
+        })
+    } catch (error) {
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -143,14 +260,16 @@ const customerLogin = async (req, res) => {
         customer.lastLogin = new Date()
         await customer.save()
 
-        // Generate token
+        // Generate tokens
         const token = generateToken(customer._id, "customer", "customer")
+        const refreshToken = generateRefreshToken(customer._id, "customer", "customer")
 
         res.json({
             success: true,
             message: "Login successful",
             data: {
                 token,
+                refreshToken,
                 user: {
                     id: customer._id,
                     firstName: customer.firstName,
@@ -200,14 +319,16 @@ const customerRegister = async (req, res) => {
 
         await customer.save()
 
-        // Generate token
+        // Generate tokens
         const token = generateToken(customer._id, "customer", "customer")
+        const refreshToken = generateRefreshToken(customer._id, "customer", "customer")
 
         res.status(201).json({
             success: true,
             message: "Registration successful",
             data: {
                 token,
+                refreshToken,
                 user: {
                     id: customer._id,
                     firstName: customer.firstName,
@@ -273,16 +394,35 @@ const refreshToken = async (req, res) => {
     }
 }
 
-// Logout
+// Logout - Enhanced with token blacklisting simulation
 const logout = async (req, res) => {
+    console.log("first")
     try {
-        // In a real implementation, you might want to blacklist the token
+        const userId = req.user.id
+        const userType = req.user.userType
+
+        // Update user's last logout time
+        let user
+        if (userType === "admin") {
+            user = await AdminUser.findById(userId)
+        } else {
+            user = await Customer.findById(userId)
+        }
+
+        if (user) {
+            user.lastLogout = new Date()
+            await user.save()
+        }
+        console.log(user)
+
+        // In a real implementation, you would blacklist the token
         // For now, we'll just return success
         res.json({
             success: true,
             message: "Logged out successfully",
         })
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -313,6 +453,11 @@ const forgotPassword = async (req, res) => {
 
         // Generate reset token
         const resetToken = jwt.sign({ id: user._id, userType }, process.env.JWT_SECRET, { expiresIn: "1h" })
+
+        // Store reset token in user document
+        user.passwordResetToken = resetToken
+        user.passwordResetExpires = new Date(Date.now() + 3600000) // 1 hour
+        await user.save()
 
         // In a real implementation, send email with reset link
         // For now, we'll just return the token (remove this in production)
@@ -346,7 +491,7 @@ const resetPassword = async (req, res) => {
             user = await Customer.findById(decoded.id)
         }
 
-        if (!user) {
+        if (!user || user.passwordResetToken !== token || user.passwordResetExpires < new Date()) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid or expired reset token",
@@ -356,6 +501,8 @@ const resetPassword = async (req, res) => {
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 12)
         user.password = hashedPassword
+        user.passwordResetToken = undefined
+        user.passwordResetExpires = undefined
         await user.save()
 
         res.json({
@@ -429,6 +576,7 @@ const changePassword = async (req, res) => {
 module.exports = {
     adminLogin,
     adminSignup,
+    createSuperAdmin,
     customerLogin,
     customerRegister,
     refreshToken,

@@ -7,11 +7,18 @@ import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { dashboardService } from "../../services/dashboardService"
 
-interface DashboardStats {
-  totalOrders: number
-  totalRevenue: number
-  activePartners: number
+interface SuperAdminStats {
+  totalPartners: number
   activeDrones: number
+  todayRevenue: number
+  totalOrders: number
+}
+
+interface PartnerManagerStats {
+  totalOrders: number
+  successfulOrders: number
+  cancelledOrders: number
+  totalItems: number
 }
 
 interface RecentOrder {
@@ -20,15 +27,24 @@ interface RecentOrder {
   status: string
   amount: number
   createdAt: string
+  items?: number
 }
 
 export default function DashboardScreen() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrders: 0,
-    totalRevenue: 0,
-    activePartners: 0,
+  const [superAdminStats, setSuperAdminStats] = useState<SuperAdminStats>({
+    totalPartners: 0,
     activeDrones: 0,
+    todayRevenue: 0,
+    totalOrders: 0,
   })
+
+  const [partnerStats, setPartnerStats] = useState<PartnerManagerStats>({
+    totalOrders: 0,
+    successfulOrders: 0,
+    cancelledOrders: 0,
+    totalItems: 0,
+  })
+
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -37,21 +53,36 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+  }, [user])
 
   const loadDashboardData = async () => {
     try {
-      const [statsResponse, ordersResponse] = await Promise.all([
-        dashboardService.getDashboardStats(),
-        dashboardService.getRecentOrders({ limit: 5 }),
-      ])
+      if (user?.role === "super_admin") {
+        const [statsResponse, ordersResponse] = await Promise.all([
+          dashboardService.getSuperAdminStats(),
+          dashboardService.getRecentOrders({ limit: 5 }),
+        ])
 
-      if (statsResponse.success) {
-        setStats(statsResponse.data)
-      }
+        if (statsResponse.success) {
+          setSuperAdminStats(statsResponse.data)
+        }
 
-      if (ordersResponse.success) {
-        setRecentOrders(ordersResponse.data)
+        if (ordersResponse.success) {
+          setRecentOrders(ordersResponse.data)
+        }
+      } else {
+        const [statsResponse, ordersResponse] = await Promise.all([
+          dashboardService.getPartnerManagerStats(),
+          dashboardService.getRecentOrders({ limit: 5 }),
+        ])
+
+        if (statsResponse.success) {
+          setPartnerStats(statsResponse.data)
+        }
+
+        if (ordersResponse.success) {
+          setRecentOrders(ordersResponse.data)
+        }
       }
     } catch (error) {
       console.error("Failed to load dashboard data:", error)
@@ -81,6 +112,8 @@ export default function DashboardScreen() {
         return "#F59E0B"
       case "pending":
         return "#6B7280"
+      case "cancelled":
+        return "#EF4444"
       default:
         return "#6B7280"
     }
@@ -94,6 +127,79 @@ export default function DashboardScreen() {
     return new Date(dateString).toLocaleDateString()
   }
 
+  // Super Admin Dashboard
+  if (user?.role === "super_admin") {
+    return (
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Header */}
+        <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.welcomeText}>Welcome back,</Text>
+              <Text style={styles.userName}>{user?.name || "Super Admin"}</Text>
+            </View>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Super Admin Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.statCardBlue]}>
+              <Ionicons name="people-outline" size={30} color="#667eea" />
+              <Text style={styles.statNumber}>{superAdminStats.totalPartners}</Text>
+              <Text style={styles.statLabel}>Total Partners</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardGreen]}>
+              <Ionicons name="airplane-outline" size={30} color="#10B981" />
+              <Text style={styles.statNumber}>{superAdminStats.activeDrones}</Text>
+              <Text style={styles.statLabel}>Active Drones</Text>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.statCardOrange]}>
+              <Ionicons name="cash-outline" size={30} color="#F59E0B" />
+              <Text style={styles.statNumber}>{formatCurrency(superAdminStats.todayRevenue)}</Text>
+              <Text style={styles.statLabel}>Today Revenue</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardPurple]}>
+              <Ionicons name="receipt-outline" size={30} color="#8B5CF6" />
+              <Text style={styles.statNumber}>{superAdminStats.totalOrders}</Text>
+              <Text style={styles.statLabel}>Total Orders</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Recent Orders */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <View style={styles.ordersContainer}>
+            {recentOrders.map((order) => (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <Text style={styles.orderCustomer}>{order.customerName}</Text>
+                  <Text style={styles.orderAmount}>{formatCurrency(order.amount)}</Text>
+                </View>
+                <View style={styles.orderFooter}>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
+                    <Text style={styles.statusText}>{order.status.replace("_", " ")}</Text>
+                  </View>
+                  <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    )
+  }
+
+  // Partner Manager Dashboard
   return (
     <ScrollView
       style={styles.container}
@@ -104,7 +210,7 @@ export default function DashboardScreen() {
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={styles.userName}>{user?.name || "Admin"}</Text>
+            <Text style={styles.userName}>{user?.name || "Partner Manager"}</Text>
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="white" />
@@ -112,54 +218,39 @@ export default function DashboardScreen() {
         </View>
       </LinearGradient>
 
-      {/* Stats Cards */}
+      {/* Add New Item Button */}
+      <View style={styles.addItemContainer}>
+        <TouchableOpacity style={styles.addItemButton}>
+          <Ionicons name="add-circle-outline" size={24} color="white" />
+          <Text style={styles.addItemText}>Add New Item</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Partner Manager Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
           <View style={[styles.statCard, styles.statCardBlue]}>
             <Ionicons name="receipt-outline" size={30} color="#667eea" />
-            <Text style={styles.statNumber}>{stats.totalOrders}</Text>
+            <Text style={styles.statNumber}>{partnerStats.totalOrders}</Text>
             <Text style={styles.statLabel}>Total Orders</Text>
           </View>
           <View style={[styles.statCard, styles.statCardGreen]}>
-            <Ionicons name="cash-outline" size={30} color="#10B981" />
-            <Text style={styles.statNumber}>{formatCurrency(stats.totalRevenue)}</Text>
-            <Text style={styles.statLabel}>Revenue</Text>
+            <Ionicons name="checkmark-circle-outline" size={30} color="#10B981" />
+            <Text style={styles.statNumber}>{partnerStats.successfulOrders}</Text>
+            <Text style={styles.statLabel}>Successful Orders</Text>
           </View>
         </View>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, styles.statCardOrange]}>
-            <Ionicons name="storefront-outline" size={30} color="#F59E0B" />
-            <Text style={styles.statNumber}>{stats.activePartners}</Text>
-            <Text style={styles.statLabel}>Active Partners</Text>
+          <View style={[styles.statCard, styles.statCardRed]}>
+            <Ionicons name="close-circle-outline" size={30} color="#EF4444" />
+            <Text style={styles.statNumber}>{partnerStats.cancelledOrders}</Text>
+            <Text style={styles.statLabel}>Cancelled Orders</Text>
           </View>
           <View style={[styles.statCard, styles.statCardPurple]}>
-            <Ionicons name="airplane-outline" size={30} color="#8B5CF6" />
-            <Text style={styles.statNumber}>{stats.activeDrones}</Text>
-            <Text style={styles.statLabel}>Active Drones</Text>
+            <Ionicons name="cube-outline" size={30} color="#8B5CF6" />
+            <Text style={styles.statNumber}>{partnerStats.totalItems}</Text>
+            <Text style={styles.statLabel}>Total Items</Text>
           </View>
-        </View>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="add-circle-outline" size={24} color="#667eea" />
-            <Text style={styles.actionText}>New Order</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="people-outline" size={24} color="#667eea" />
-            <Text style={styles.actionText}>Manage Partners</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="airplane-outline" size={24} color="#667eea" />
-            <Text style={styles.actionText}>Drone Status</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="bar-chart-outline" size={24} color="#667eea" />
-            <Text style={styles.actionText}>Analytics</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -214,6 +305,32 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: 8,
   },
+  addItemContainer: {
+    padding: 20,
+    marginTop: -20,
+  },
+  addItemButton: {
+    backgroundColor: "#667eea",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 15,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addItemText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
   statsContainer: {
     padding: 20,
     marginTop: -20,
@@ -255,6 +372,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: "#8B5CF6",
   },
+  statCardRed: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#EF4444",
+  },
   statNumber: {
     fontSize: 24,
     fontWeight: "bold",
@@ -275,33 +396,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
     marginBottom: 15,
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  actionButton: {
-    width: "48%",
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  actionText: {
-    fontSize: 14,
-    color: "#333",
-    marginTop: 8,
-    textAlign: "center",
   },
   ordersContainer: {
     backgroundColor: "white",

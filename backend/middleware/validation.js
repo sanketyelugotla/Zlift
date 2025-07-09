@@ -54,24 +54,6 @@ const validatePasswordReset = [
     handleValidationErrors,
 ]
 
-// Partner validations
-const validatePartner = [
-    body("businessName").trim().isLength({ min: 2 }).withMessage("Business name is required"),
-    body("partnerType")
-        .isIn(["restaurant", "pharmacy", "grocery", "electronics", "fashion", "books", "general"])
-        .withMessage("Valid partner type is required"),
-    body("email").isEmail().normalizeEmail().withMessage("Valid email is required"),
-    body("phone").isMobilePhone().withMessage("Valid phone number is required"),
-    body("ownerName").trim().isLength({ min: 2 }).withMessage("Owner name is required"),
-    body("address.street").trim().isLength({ min: 5 }).withMessage("Street address is required"),
-    body("address.city").trim().isLength({ min: 2 }).withMessage("City is required"),
-    body("address.state").trim().isLength({ min: 2 }).withMessage("State is required"),
-    body("address.pincode").isLength({ min: 5, max: 10 }).withMessage("Valid pincode is required"),
-    body("address.coordinates.latitude").isFloat({ min: -90, max: 90 }).withMessage("Valid latitude is required"),
-    body("address.coordinates.longitude").isFloat({ min: -180, max: 180 }).withMessage("Valid longitude is required"),
-    handleValidationErrors,
-]
-
 const validatePartnerStatus = [
     body("status").isIn(["pending", "approved", "suspended", "rejected"]).withMessage("Valid status is required"),
     handleValidationErrors,
@@ -238,6 +220,44 @@ const validateSystemSettings = [
     handleValidationErrors,
 ]
 
+// Partner validation
+const validatePartner = [
+    body("businessName").trim().isLength({ min: 2 }).withMessage("Business name must be at least 2 characters long"),
+    body("ownerName").trim().isLength({ min: 2 }).withMessage("Owner name must be at least 2 characters long"),
+    body("email").isEmail().normalizeEmail().withMessage("Please provide a valid email"),
+    body("phone")
+        .isMobilePhone()
+        .withMessage("Please provide a valid phone number")
+        .isLength({ min: 10, max: 15 })
+        .withMessage("Phone number must be between 10-15 digits"),
+    body("businessType").isIn(["restaurant", "grocery", "pharmacy", "retail"]).withMessage("Invalid business type"),
+    body("address.street").trim().notEmpty().withMessage("Street address is required"),
+    body("address.city").trim().notEmpty().withMessage("City is required"),
+    body("address.zipCode").trim().notEmpty().withMessage("Zip code is required"),
+    handleValidationErrors,
+]
+
+// Super admin creation validation
+const validateSuperAdminCreation = [
+    body("firstName").trim().isLength({ min: 2 }).withMessage("First name must be at least 2 characters long"),
+    body("lastName").trim().isLength({ min: 2 }).withMessage("Last name must be at least 2 characters long"),
+    body("email").isEmail().normalizeEmail().withMessage("Please provide a valid email"),
+    body("phone")
+        .isMobilePhone()
+        .withMessage("Please provide a valid phone number")
+        .isLength({ min: 10, max: 15 })
+        .withMessage("Phone number must be between 10-15 digits"),
+    body("password")
+        .isLength({ min: 12 })
+        .withMessage("Super admin password must be at least 12 characters long")
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+        .withMessage(
+            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+        ),
+    body("secretKey").notEmpty().withMessage("Secret key is required for super admin creation"),
+    handleValidationErrors,
+]
+
 module.exports = {
     validateLogin,
     validateRegister,
@@ -260,5 +280,7 @@ module.exports = {
     validatePromotion,
     validateCategory,
     validateSystemSettings,
-    validateAdminSignup
+    validateAdminSignup,
+    validatePartner,
+    validateSuperAdminCreation,
 }

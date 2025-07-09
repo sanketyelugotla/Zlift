@@ -76,6 +76,7 @@ const corsOptions = {
             "http://192.168.0.100:3000",
             "http://192.168.0.100:19006",
             "http://192.168.0.100:19000",
+            "http://localhost:8081",
         ]
 
         if (allowedOrigins.indexOf(origin) !== -1) {

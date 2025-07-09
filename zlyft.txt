@@ -1,0 +1,41 @@
+Super admin
+no.of parners
+on.of active drones
+today revenue
+
+
+
+
+
+recent orders
+
+
+
+dashboard(home) analysis profile
+
+analysis -
+per patner revenue
+avg order cost
+avg orders per day
+avg profit per day
+
+
+patner-manager
+
+on boarding
+name location contact
+
+
+
+analysis -
+total profit
+per day profit
+today orders
+today revenue
+
+
+
+dashboard(home) inventory analysis profile
+
+
+

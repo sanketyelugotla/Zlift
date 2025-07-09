@@ -1,7 +1,7 @@
-export interface ApiResponse<T = any> {
+interface ApiResponse<T = any> {
     success: boolean
+    message: string
     data?: T
-    message?: string
     error?: string
 }
 
@@ -23,111 +23,91 @@ class BaseService {
         }
 
         if (this.authToken) {
-            headers.Authorization = `Bearer ${this.authToken}`
+            headers["Authorization"] = `Bearer ${this.authToken}`
         }
 
         return headers
     }
 
-    private buildQueryString(params: Record<string, any>): string {
-        const searchParams = new URLSearchParams()
-        Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                searchParams.append(key, String(value))
-            }
-        })
-        return searchParams.toString()
-    }
-
-    protected async request<T = any>(
-        endpoint: string,
-        options: RequestInit = {},
-        params?: Record<string, any>,
-    ): Promise<ApiResponse<T>> {
+    private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
         try {
-            let url = `${this.baseURL}${endpoint}`
-            console.log(url)
-
-            if (params) {
-                const queryString = this.buildQueryString(params)
-                if (queryString) {
-                    url += `?${queryString}`
-                }
-            }
-
-            const response = await fetch(url, {
-                ...options,
-                headers: {
-                    ...this.getHeaders(),
-                    ...options.headers,
-                },
-            })
-
             const data = await response.json()
 
             if (!response.ok) {
-                return {
-                    success: false,
-                    message: data.message || `HTTP error! status: ${response.status}`,
-                    error: data.error,
-                }
+                throw new Error(data.message || `HTTP error! status: ${response.status}`)
             }
 
-            return {
-                success: true,
-                data: data.data || data,
-                message: data.message,
-            }
+            return data
+        } catch (error) {
+            console.error("API Response Error:", error)
+            throw error
+        }
+    }
+
+    async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+        try {
+            console.log(`Making GET request to: ${this.baseURL}${endpoint}`)
+
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+                method: "GET",
+                headers: this.getHeaders(),
+            })
+
+            return await this.handleResponse<T>(response)
         } catch (error: any) {
-            console.error(`API request failed for ${endpoint}:`, error)
+            console.error(`GET ${endpoint} failed:`, error)
+            throw new Error(error.message || "Network request failed")
+        }
+    }
 
-            // Return demo data for development when network fails
-            if (endpoint.includes("/dashboard/stats")) {
-                return {
-                    success: true,
-                    data: {
-                        totalOrders: 1250,
-                        totalRevenue: 45680.5,
-                        activePartners: 85,
-                        activeDrones: 12,
-                    },
-                } as ApiResponse<T>
-            }
+    async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+        try {
+            console.log(`Making POST request to: ${this.baseURL}${endpoint}`)
+            console.log("Request data:", data)
 
-            if (endpoint.includes("/dashboard/recent-orders")) {
-                return {
-                    success: true,
-                    data: [
-                        {
-                            id: "1",
-                            customerName: "John Doe",
-                            status: "delivered",
-                            amount: 25.99,
-                            createdAt: new Date().toISOString(),
-                        },
-                        {
-                            id: "2",
-                            customerName: "Jane Smith",
-                            status: "in_transit",
-                            amount: 42.5,
-                            createdAt: new Date().toISOString(),
-                        },
-                        {
-                            id: "3",
-                            customerName: "Mike Johnson",
-                            status: "pending",
-                            amount: 18.75,
-                            createdAt: new Date().toISOString(),
-                        },
-                    ],
-                } as ApiResponse<T>
-            }
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+                method: "POST",
+                headers: this.getHeaders(),
+                body: data ? JSON.stringify(data) : undefined,
+            })
 
-            return {
-                success: false,
-                message: error.message || "Network error occurred",
-                error: error.toString(),
-            }
+            return await this.handleResponse<T>(response)
+        } catch (error: any) {
+            console.error(`POST ${endpoint} failed:`, error)
+            throw new Error(error.message || "Network request failed")
+        }
+    }
+
+    async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+        try {
+            console.log(`Making PUT request to: ${this.baseURL}${endpoint}`)
+
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+                method: "PUT",
+                headers: this.getHeaders(),
+                body: data ? JSON.stringify(data) : undefined,
+            })
+
+            return await this.handleResponse<T>(response)
+        } catch (error: any) {
+            console.error(`PUT ${endpoint} failed:`, error)
+            throw new Error(error.message || "Network request failed")
+        }
+    }
+
+    async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+        try {
+            console.log(`Making DELETE request to: ${this.baseURL}${endpoint}`)
+
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
+                method: "DELETE",
+                headers: this.getHeaders(),
+            })
+
+            return await this.handleResponse<T>(response)
+        } catch (error: any) {
+            console.error(`DELETE ${endpoint} failed:`, error)
+            throw new Error(error.message || "Network request failed")
         }
     }
 }

@@ -10,6 +10,10 @@ interface User {
     name: string
     email: string
     role: string
+    permissions?: Array<{
+        module: string
+        actions: string[]
+    }>
 }
 
 interface SignupData {
@@ -25,7 +29,7 @@ interface AuthContextType {
     isLoading: boolean
     login: (email: string, password: string) => Promise<void>
     signup: (data: SignupData) => Promise<void>
-    logout: () => void
+    logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -72,9 +76,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const response = await authService.login(email, password)
 
             if (response.success && response.data) {
-                const { token, user: userData } = response.data
+                const { token, refreshToken, user: userData } = response.data
 
                 await AsyncStorage.setItem("authToken", token)
+                await AsyncStorage.setItem("refreshToken", refreshToken || "")
                 await AsyncStorage.setItem("userData", JSON.stringify(userData))
 
                 setUser(userData)
@@ -101,12 +106,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const logout = async () => {
         try {
+            // Call logout API
             await authService.logout()
         } catch (error) {
-            console.error("Logout error:", error)
+            console.error("Logout API error:", error)
         } finally {
-            await AsyncStorage.removeItem("authToken")
-            await AsyncStorage.removeItem("userData")
+            // Always clear local storage regardless of API response
+            try {
+                await AsyncStorage.multiRemove(["authToken", "refreshToken", "userData"])
+            } catch (storageError) {
+                console.error("Error clearing storage:", storageError)
+            }
+
             setUser(null)
             authService.setAuthToken(null)
         }
