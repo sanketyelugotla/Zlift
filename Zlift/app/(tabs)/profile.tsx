@@ -1,270 +1,144 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal } from "react-native"
-import { useAuth } from "@/contexts/AuthContext"
+import { StyleSheet, ScrollView, View, Text, TouchableOpacity, Alert, TextInput } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
+import { Ionicons } from "@expo/vector-icons"
+import { useAuth } from "../../contexts/AuthContext"
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedName, setEditedName] = useState(user?.name || "")
+  const [editedEmail, setEditedEmail] = useState(user?.email || "")
 
-  // Edit profile form state
-  const [editForm, setEditForm] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-  })
+  const handleSave = () => {
+    Alert.alert("Save Changes", "Profile update functionality will be implemented here")
+    setIsEditing(false)
+  }
 
-  // Change password form state
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  })
+  const handleChangePassword = () => {
+    Alert.alert("Change Password", "Password change functionality will be implemented here")
+  }
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          setIsLoading(true)
-          try {
-            await logout()
-          } catch (error) {
-            console.error("Logout error:", error)
-          } finally {
-            setIsLoading(false)
-          }
-        },
-      },
+      { text: "Logout", style: "destructive", onPress: logout },
     ])
-  }
-
-  const handleSaveProfile = async () => {
-    if (!editForm.name.trim() || !editForm.email.trim()) {
-      Alert.alert("Error", "Please fill in all fields")
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      // Here you would call an API to update the profile
-      // const response = await authService.updateProfile(editForm)
-
-      Alert.alert("Success", "Profile updated successfully")
-      setShowEditModal(false)
-    } catch (error) {
-      console.error("Failed to update profile:", error)
-      Alert.alert("Error", "Failed to update profile")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleChangePassword = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields")
-      return
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      Alert.alert("Error", "New passwords do not match")
-      return
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      Alert.alert("Error", "New password must be at least 6 characters")
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      // Here you would call an API to change the password
-      // const response = await authService.changePassword(passwordForm.currentPassword, passwordForm.newPassword)
-
-      Alert.alert("Success", "Password changed successfully")
-      setShowChangePasswordModal(false)
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      })
-    } catch (error) {
-      console.error("Failed to change password:", error)
-      Alert.alert("Error", "Failed to change password")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const getRoleDisplayName = (role: string) => {
-    switch (role) {
-      case "super_admin":
-        return "Super Administrator"
-      case "partner_manager":
-        return "Partner Manager"
-      case "operations_manager":
-        return "Operations Manager"
-      case "customer_support":
-        return "Customer Support"
-      default:
-        return role
-    }
-  }
-
-  const getPermissionModules = () => {
-    if (!user?.permissions) return []
-    return user.permissions.map((p) => p.module).join(", ")
   }
 
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
+      <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle-outline" size={80} color="white" />
+          </View>
+          <Text style={styles.userName}>{user?.name || "User"}</Text>
+          <Text style={styles.userRole}>{user?.role?.replace("_", " ").toUpperCase() || "USER"}</Text>
+        </View>
+      </LinearGradient>
 
       {/* Profile Information */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>{user?.name}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Profile Information</Text>
+          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+            <Ionicons name={isEditing ? "close-outline" : "pencil-outline"} size={20} color="#667eea" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{user?.email}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Role</Text>
-          <Text style={styles.value}>{getRoleDisplayName(user?.role || "")}</Text>
-        </View>
-
-        {user?.permissions && user.permissions.length > 0 && (
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Permissions</Text>
-            <Text style={styles.value}>{getPermissionModules()}</Text>
+        <View style={styles.profileCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.textInput}
+                value={editedName}
+                onChangeText={setEditedName}
+                placeholder="Enter your full name"
+              />
+            ) : (
+              <Text style={styles.inputValue}>{user?.name || "Not provided"}</Text>
+            )}
           </View>
-        )}
 
-        <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)}>
-          <Text style={styles.editButtonText}>Edit Profile</Text>
-        </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email Address</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.textInput}
+                value={editedEmail}
+                onChangeText={setEditedEmail}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+              />
+            ) : (
+              <Text style={styles.inputValue}>{user?.email || "Not provided"}</Text>
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Role</Text>
+            <Text style={styles.inputValue}>{user?.role?.replace("_", " ").toUpperCase() || "Not assigned"}</Text>
+          </View>
+
+          {isEditing && (
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Account Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account Actions</Text>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => setShowChangePasswordModal(true)}>
-          <Text style={styles.actionButtonText}>Change Password</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsCard}>
+          <TouchableOpacity style={styles.actionItem} onPress={handleChangePassword}>
+            <View style={styles.actionLeft}>
+              <Ionicons name="lock-closed-outline" size={24} color="#667eea" />
+              <Text style={styles.actionText}>Change Password</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.logoutButton]}
-          onPress={handleLogout}
-          disabled={isLoading}
-        >
-          <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
-            {isLoading ? "Logging out..." : "Logout"}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.actionItem}>
+            <View style={styles.actionLeft}>
+              <Ionicons name="notifications-outline" size={24} color="#667eea" />
+              <Text style={styles.actionText}>Notification Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionItem}>
+            <View style={styles.actionLeft}>
+              <Ionicons name="help-circle-outline" size={24} color="#667eea" />
+              <Text style={styles.actionText}>Help & Support</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionItem}>
+            <View style={styles.actionLeft}>
+              <Ionicons name="document-text-outline" size={24} color="#667eea" />
+              <Text style={styles.actionText}>Terms & Privacy</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Edit Profile Modal */}
-      <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowEditModal(false)}>
-              <Text style={styles.cancelButton}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity onPress={handleSaveProfile} disabled={isLoading}>
-              <Text style={styles.saveButton}>{isLoading ? "Saving..." : "Save"}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.formContainer}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                value={editForm.name}
-                onChangeText={(text) => setEditForm({ ...editForm, name: text })}
-                placeholder="Enter your name"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={editForm.email}
-                onChangeText={(text) => setEditForm({ ...editForm, email: text })}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal visible={showChangePasswordModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowChangePasswordModal(false)}>
-              <Text style={styles.cancelButton}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Change Password</Text>
-            <TouchableOpacity onPress={handleChangePassword} disabled={isLoading}>
-              <Text style={styles.saveButton}>{isLoading ? "Changing..." : "Change"}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.formContainer}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Current Password</Text>
-              <TextInput
-                style={styles.input}
-                value={passwordForm.currentPassword}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, currentPassword: text })}
-                placeholder="Enter current password"
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={passwordForm.newPassword}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
-                placeholder="Enter new password"
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Confirm New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={passwordForm.confirmPassword}
-                onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
-                placeholder="Confirm new password"
-                secureTextEntry
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Logout Button */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   )
 }
@@ -275,129 +149,143 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
   },
   header: {
-    backgroundColor: "#fff",
-    padding: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    paddingBottom: 40,
+    paddingHorizontal: 20,
   },
-  headerTitle: {
+  headerContent: {
+    alignItems: "center",
+  },
+  avatarContainer: {
+    marginBottom: 15,
+  },
+  userName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: "white",
+    marginBottom: 5,
+  },
+  userRole: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "600",
   },
   section: {
-    backgroundColor: "#fff",
-    margin: 16,
-    padding: 16,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    padding: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
-  },
-  infoRow: {
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  editButton: {
+    padding: 8,
+  },
+  profileCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 8,
+  },
+  inputValue: {
+    fontSize: 16,
+    color: "#333",
+    paddingVertical: 8,
+  },
+  textInput: {
+    fontSize: 16,
+    color: "#333",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f9f9f9",
+  },
+  saveButton: {
+    backgroundColor: "#667eea",
+    borderRadius: 8,
     paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  saveButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  actionsCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  actionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  label: {
-    fontSize: 16,
-    color: "#666",
-    flex: 1,
+  actionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  value: {
+  actionText: {
     fontSize: 16,
     color: "#333",
-    flex: 2,
-    textAlign: "right",
-  },
-  editButton: {
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  editButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  actionButton: {
-    backgroundColor: "#f5f5f5",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#007AFF",
+    marginLeft: 12,
   },
   logoutButton: {
-    backgroundColor: "#ffebee",
-  },
-  logoutButtonText: {
-    color: "#F44336",
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  modalHeader: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  cancelButton: {
-    color: "#007AFF",
+  logoutText: {
     fontSize: 16,
-  },
-  saveButton: {
-    color: "#007AFF",
-    fontSize: 16,
+    color: "#EF4444",
     fontWeight: "600",
-  },
-  formContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#f5f5f5",
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    marginLeft: 8,
   },
 })

@@ -1,15 +1,15 @@
 export interface ApiResponse<T = any> {
     success: boolean
-    message: string
     data?: T
+    message?: string
     error?: string
 }
 
 class BaseService {
-    private baseURL: string
+    protected baseURL: string
     private authToken: string | null = null
 
-    constructor(baseURL = "http://192.168.0.105:5000/api") {
+    constructor(baseURL = "http://192.168.0.105:5000//api") {
         this.baseURL = baseURL
     }
 
@@ -17,88 +17,85 @@ class BaseService {
         this.authToken = token
     }
 
-    private getHeaders(): HeadersInit {
-        const headers: HeadersInit = {
+    protected buildQueryString(params?: Record<string, any>): string {
+        if (!params) return ""
+
+        const queryParams = new URLSearchParams()
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                queryParams.append(key, value.toString())
+            }
+        })
+
+        const queryString = queryParams.toString()
+        return queryString ? `?${queryString}` : ""
+    }
+
+    protected async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+        const url = `${this.baseURL}${endpoint}`
+
+        const headers: Record<string, string> = {
             "Content-Type": "application/json",
         }
 
-        if (this.authToken) {
-            headers["Authorization"] = `Bearer ${this.authToken}`
+        // Add existing headers from options
+        if (options.headers) {
+            if (options.headers instanceof Headers) {
+                options.headers.forEach((value, key) => {
+                    headers[key] = value
+                })
+            } else if (Array.isArray(options.headers)) {
+                options.headers.forEach(([key, value]) => {
+                    headers[key] = value
+                })
+            } else {
+                Object.assign(headers, options.headers)
+            }
         }
 
-        return headers
-    }
+        if (this.authToken) {
+            headers.Authorization = `Bearer ${this.authToken}`
+        }
 
-    private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
         try {
+            const response = await fetch(url, {
+                ...options,
+                headers,
+            })
+
             const data = await response.json()
+
             if (!response.ok) {
                 throw new Error(data.message || `HTTP error! status: ${response.status}`)
             }
+
             return data
         } catch (error) {
-            console.error("API Response Error:", error)
+            console.error(`API Error (${endpoint}):`, error)
             throw error
         }
     }
 
-    async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-        try {
-            console.log(`Making GET request to: ${this.baseURL}${endpoint}`)
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                method: "GET",
-                headers: this.getHeaders(),
-            })
-            return await this.handleResponse<T>(response)
-        } catch (error: any) {
-            console.error(`GET ${endpoint} failed:`, error)
-            throw new Error(error.message || "Network request failed")
-        }
+    protected async get<T = any>(endpoint: string): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, { method: "GET" })
     }
 
-    async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-        try {
-            console.log(`Making POST request to: ${this.baseURL}${endpoint}`)
-            console.log("Request data:", data)
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                method: "POST",
-                headers: this.getHeaders(),
-                body: data ? JSON.stringify(data) : undefined,
-            })
-            return await this.handleResponse<T>(response)
-        } catch (error: any) {
-            console.error(`POST ${endpoint} failed:`, error)
-            throw new Error(error.message || "Network request failed")
-        }
+    protected async post<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, {
+            method: "POST",
+            body: data ? JSON.stringify(data) : undefined,
+        })
     }
 
-    async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-        try {
-            console.log(`Making PUT request to: ${this.baseURL}${endpoint}`)
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                method: "PUT",
-                headers: this.getHeaders(),
-                body: data ? JSON.stringify(data) : undefined,
-            })
-            return await this.handleResponse<T>(response)
-        } catch (error: any) {
-            console.error(`PUT ${endpoint} failed:`, error)
-            throw new Error(error.message || "Network request failed")
-        }
+    protected async put<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, {
+            method: "PUT",
+            body: data ? JSON.stringify(data) : undefined,
+        })
     }
 
-    async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
-        try {
-            console.log(`Making DELETE request to: ${this.baseURL}${endpoint}`)
-            const response = await fetch(`${this.baseURL}${endpoint}`, {
-                method: "DELETE",
-                headers: this.getHeaders(),
-            })
-            return await this.handleResponse<T>(response)
-        } catch (error: any) {
-            console.error(`DELETE ${endpoint} failed:`, error)
-            throw new Error(error.message || "Network request failed")
-        }
+    protected async delete<T = any>(endpoint: string): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, { method: "DELETE" })
     }
 }
 

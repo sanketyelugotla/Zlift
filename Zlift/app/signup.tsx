@@ -95,7 +95,7 @@ export default function SignupScreen() {
         setIsLoading(true)
         try {
             const res = await signup(formData)
-            console.log(res);
+            console.log(res)
             Alert.alert("Success", "Account created successfully! Please login.", [
                 {
                     text: "OK",
