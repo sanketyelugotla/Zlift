@@ -279,6 +279,7 @@ const getPartnerManagerAnalytics = async (req, res) => {
 
 // Get Recent Orders
 const getRecentOrders = async (req, res) => {
+    console.log("first")
     try {
         const { limit = 10, status } = req.query
         const filter = {}

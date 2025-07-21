@@ -70,7 +70,7 @@ const adminUserSchema = new mongoose.Schema(
 )
 
 // Indexes
-adminUserSchema.index({ email: 1 })
+// adminUserSchema.index({ email: 1 })
 adminUserSchema.index({ role: 1 })
 
 module.exports = mongoose.model("AdminUser", adminUserSchema)

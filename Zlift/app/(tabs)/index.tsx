@@ -6,6 +6,8 @@ import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { dashboardService } from "../../services/dashboardService"
+import { sendNotification } from '../utils/notificationService';
+import * as Notifications from 'expo-notifications'
 
 interface SuperAdminStats {
   totalPartners: number
@@ -54,6 +56,21 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadDashboardData()
   }, [user])
+
+  const handleNotification = () => {
+    Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Order no 226 received!',
+        body: 'Regular Pepper Chicken Sandwich - 1',
+        sound: 'default',
+      },
+      trigger: {
+        type: 'timeInterval',
+        seconds: 3,
+        repeats: false,
+      },
+    });
+  }
 
   const loadDashboardData = async () => {
     try {
@@ -220,7 +237,7 @@ export default function DashboardScreen() {
 
       {/* Add New Item Button */}
       <View style={styles.addItemContainer}>
-        <TouchableOpacity style={styles.addItemButton}>
+        <TouchableOpacity style={styles.addItemButton} onPress={() => handleNotification()}>
           <Ionicons name="add-circle-outline" size={24} color="white" />
           <Text style={styles.addItemText}>Add New Item</Text>
         </TouchableOpacity>
@@ -287,6 +304,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 20,
+    marginBottom: 10
   },
   headerContent: {
     flexDirection: "row",

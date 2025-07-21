@@ -183,6 +183,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#333",
+    marginBottom: 15,
   },
   editButton: {
     padding: 8,

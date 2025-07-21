@@ -1,19 +1,19 @@
 const express = require("express")
 const router = express.Router()
 const dashboardController = require("../controllers/dashboardController")
-const { authenticateToken, requireRole } = require("../middleware/auth")
+const { authenticateAdmin, requireRole } = require("../middleware/auth")
 
 // Super Admin Dashboard Routes
 router.get(
     "/super-admin/stats",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["super_admin"]),
     dashboardController.getSuperAdminStats,
 )
 
 router.get(
     "/super-admin/analytics",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["super_admin"]),
     dashboardController.getSuperAdminAnalytics,
 )
@@ -21,51 +21,51 @@ router.get(
 // Partner Manager Dashboard Routes
 router.get(
     "/partner-manager/stats",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.getPartnerManagerStats,
 )
 
 router.get(
     "/partner-manager/analytics",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.getPartnerManagerAnalytics,
 )
 
 // Common Dashboard Routes
-router.get("/recent-orders", authenticateToken, dashboardController.getRecentOrders)
+router.get("/recent-orders", authenticateAdmin, dashboardController.getRecentOrders)
 
 router.get(
     "/inventory",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.getInventoryItems,
 )
 
 router.post(
     "/inventory",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.addInventoryItem,
 )
 
 router.put(
     "/inventory/:id",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.updateInventoryItem,
 )
 
 router.delete(
     "/inventory/:id",
-    authenticateToken,
+    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.deleteInventoryItem,
 )
 
-router.get("/health", authenticateToken, dashboardController.getSystemHealth)
+router.get("/health", authenticateAdmin, dashboardController.getSystemHealth)
 
-router.get("/activity", authenticateToken, dashboardController.getActivityFeed)
+router.get("/activity", authenticateAdmin, dashboardController.getActivityFeed)
 
 module.exports = router

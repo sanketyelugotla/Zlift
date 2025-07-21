@@ -148,8 +148,8 @@ const droneOperatorSchema = new mongoose.Schema(
 )
 
 // Indexes
-droneOperatorSchema.index({ employeeId: 1 })
-droneOperatorSchema.index({ email: 1 })
+// droneOperatorSchema.index({ employeeId: 1 })
+// droneOperatorSchema.index({ email: 1 })
 droneOperatorSchema.index({ status: 1 })
 droneOperatorSchema.index({ licenseExpiryDate: 1 })
 

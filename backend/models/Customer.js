@@ -116,7 +116,7 @@ const customerSchema = new mongoose.Schema(
 )
 
 // Indexes
-customerSchema.index({ email: 1 })
-customerSchema.index({ phone: 1 })
+// customerSchema.index({ email: 1 })
+// customerSchema.index({ phone: 1 })
 
 module.exports = mongoose.model("Customer", customerSchema)

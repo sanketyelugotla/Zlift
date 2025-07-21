@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.sanketyelugotla.Zlift"
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +34,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e6543021-7c06-4a4c-af6f-7a45f5714288"
+      }
     }
   }
 }

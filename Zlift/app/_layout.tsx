@@ -6,10 +6,25 @@ import { useFonts } from "expo-font"
 import { Stack } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { useEffect } from "react"
+
 // import "react-native-reanimated/lib/reanimated2/js-reanimated"
 
 import { useColorScheme } from "@/components/useColorScheme"
 import { AuthProvider } from "../contexts/AuthContext"
+
+import * as Notifications from 'expo-notifications';
+import { sendNotification, requestNotificationPermission } from './utils/notificationService';
+
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -39,6 +54,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync()
     }
+    requestNotificationPermission();
   }, [loaded])
 
   if (!loaded) {

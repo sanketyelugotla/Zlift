@@ -105,7 +105,7 @@ const droneSchema = new mongoose.Schema(
 )
 
 // Indexes
-droneSchema.index({ droneId: 1 })
+// droneSchema.index({ droneId: 1 })
 droneSchema.index({ status: 1 })
 droneSchema.index({ "currentLocation.latitude": 1, "currentLocation.longitude": 1 })
 

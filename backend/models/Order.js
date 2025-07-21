@@ -191,7 +191,7 @@ orderSchema.pre("save", function (next) {
 })
 
 // Indexes
-orderSchema.index({ orderNumber: 1 })
+// orderSchema.index({ orderNumber: 1 })
 orderSchema.index({ customerId: 1 })
 orderSchema.index({ partnerId: 1 })
 orderSchema.index({ status: 1 })

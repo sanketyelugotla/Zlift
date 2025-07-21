@@ -177,7 +177,7 @@ const partnerSchema = new mongoose.Schema(
 )
 
 // Indexes
-partnerSchema.index({ email: 1 })
+// partnerSchema.index({ email: 1 })
 partnerSchema.index({ partnerType: 1 })
 partnerSchema.index({ status: 1 })
 partnerSchema.index({ "address.coordinates": "2dsphere" })

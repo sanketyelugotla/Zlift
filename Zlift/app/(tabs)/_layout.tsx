@@ -21,7 +21,7 @@ export default function TabLayout() {
             borderTopColor: "#f0f0f0",
             height: 60,
             paddingBottom: 8,
-            paddingTop: 8,
+            paddingTop: 20,
           },
         }}
       >
@@ -59,9 +59,8 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: "white",
-          borderTopWidth: 1,
-          borderTopColor: "#f0f0f0",
-          height: 60,
+          borderTopWidth: 0,
+          height: 80,
           paddingBottom: 8,
           paddingTop: 8,
         },

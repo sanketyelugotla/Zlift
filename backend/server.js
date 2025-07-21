@@ -8,8 +8,6 @@ const fs = require("fs")
 const { connectDB } = require("./config/db")
 require("dotenv").config()
 
-console.log(process.env.MONGODB_URI)
-
 const routes = require("./routes")
 const { handleUploadError } = require("./middleware/upload")
 

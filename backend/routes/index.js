@@ -15,11 +15,13 @@ const analyticsRoutes = require("./analytics")
 const reportRoutes = require("./reports")
 const notificationRoutes = require("./notifications")
 const settingsRoutes = require("./settings")
+const dashboardRoutes = require("./dashboard")
 
 // Mount routes
 router.use("/auth", authRoutes)
 router.use("/admin", adminRoutes)
 router.use("/customers", customerRoutes)
+router.use("/dashboard", dashboardRoutes)
 router.use("/partners", partnerRoutes)
 router.use("/products", productRoutes)
 router.use("/orders", orderRoutes)
