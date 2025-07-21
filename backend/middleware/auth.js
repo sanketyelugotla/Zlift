@@ -1,6 +1,69 @@
 const jwt = require("jsonwebtoken")
 const { AdminUser, Customer } = require("../models")
 
+const authenticateUser = async (req, res, next) => {
+    let token
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        try {
+            token = req.headers.authorization.split(" ")[1]
+            const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+            let user
+            if (decoded.userType === "admin") {
+                user = await AdminUser.findById(decoded.id).select("-password")
+            } else if (decoded.userType === "customer") {
+                user = await Customer.findById(decoded.id).select("-password")
+            } else if (decoded.userType === "partner") {
+                user = await Partner.findById(decoded.id).select("-password")
+            }
+
+            if (!user || !user.isActive) {
+                return res.status(401).json({ success: false, message: "Not authorized, user not found or inactive" })
+            }
+
+            req.user = {
+                id: user._id,
+                userType: decoded.userType,
+                role: decoded.role, // This will be 'admin_role', 'customer', or 'partner'
+                // Add other relevant user data based on type
+                ...(decoded.userType === "admin" && {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    permissions: user.permissions,
+                }),
+                ...(decoded.userType === "customer" && {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    phone: user.phone,
+                }),
+                ...(decoded.userType === "partner" && {
+                    ownerName: user.ownerName,
+                    businessName: user.businessName,
+                    partnerType: user.partnerType,
+                    email: user.email,
+                    phone: user.phone,
+                    outlets: user.outlets, // Include outlets for partner
+                }),
+            }
+            next()
+        } catch (error) {
+            console.error("Auth middleware error:", error)
+            if (error.name === "JsonWebTokenError") {
+                return res.status(401).json({ success: false, message: "Not authorized, token failed" })
+            }
+            if (error.name === "TokenExpiredError") {
+                return res.status(401).json({ success: false, message: "Not authorized, token expired" })
+            }
+            res.status(500).json({ success: false, message: "Server error during authentication" })
+        }
+    }
+    if (!token) {
+        res.status(401).json({ success: false, message: "Not authorized, no token" })
+    }
+}
+
 // Authenticate admin users
 const authenticateAdmin = async (req, res, next) => {
     try {
@@ -148,6 +211,7 @@ const requireRole = (allowedRoles) => {
 }
 
 module.exports = {
+    authenticateUser,
     authenticateAdmin,
     authenticateCustomer,
     checkPermission,

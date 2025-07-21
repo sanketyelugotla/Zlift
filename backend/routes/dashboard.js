@@ -1,71 +1,64 @@
 const express = require("express")
 const router = express.Router()
 const dashboardController = require("../controllers/dashboardController")
-const { authenticateAdmin, requireRole } = require("../middleware/auth")
+const { authenticateUser, requireRole, checkPermission } = require("../middleware/auth") // Updated import
+
+// Apply general authentication middleware to all dashboard routes
+router.use(authenticateUser)
 
 // Super Admin Dashboard Routes
-router.get(
-    "/super-admin/stats",
-    authenticateAdmin,
-    requireRole(["super_admin"]),
-    dashboardController.getSuperAdminStats,
-)
+router.get("/super-admin/stats", requireRole(["super_admin"]), dashboardController.getSuperAdminStats)
 
-router.get(
-    "/super-admin/analytics",
-    authenticateAdmin,
-    requireRole(["super_admin"]),
-    dashboardController.getSuperAdminAnalytics,
-)
+router.get("/super-admin/analytics", requireRole(["super_admin"]), dashboardController.getSuperAdminAnalytics)
 
 // Partner Manager Dashboard Routes
 router.get(
     "/partner-manager/stats",
-    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.getPartnerManagerStats,
 )
 
 router.get(
     "/partner-manager/analytics",
-    authenticateAdmin,
     requireRole(["partner_manager", "super_admin"]),
     dashboardController.getPartnerManagerAnalytics,
 )
 
-// Common Dashboard Routes
-router.get("/recent-orders", authenticateAdmin, dashboardController.getRecentOrders)
+// Partner Dashboard Routes (for the Partner user type)
+router.get(
+    "/partner/stats",
+    requireRole(["partner"]), // Only partners can access this
+    dashboardController.getPartnerDashboardStats,
+)
+
+// Common Dashboard Routes (permissions handled by checkPermission or internal logic)
+router.get("/recent-orders", checkPermission("dashboard", "read"), dashboardController.getRecentOrders)
 
 router.get(
     "/inventory",
-    authenticateAdmin,
-    requireRole(["partner_manager", "super_admin"]),
+    checkPermission("products", "read"), // Partners and Partner Managers can read products
     dashboardController.getInventoryItems,
 )
 
 router.post(
     "/inventory",
-    authenticateAdmin,
-    requireRole(["partner_manager", "super_admin"]),
+    checkPermission("products", "write"), // Partners and Partner Managers can write products
     dashboardController.addInventoryItem,
 )
 
 router.put(
     "/inventory/:id",
-    authenticateAdmin,
-    requireRole(["partner_manager", "super_admin"]),
+    checkPermission("products", "update"), // Partners and Partner Managers can update products
     dashboardController.updateInventoryItem,
 )
 
 router.delete(
     "/inventory/:id",
-    authenticateAdmin,
-    requireRole(["partner_manager", "super_admin"]),
+    checkPermission("products", "delete"), // Partners and Super Admins can delete products
     dashboardController.deleteInventoryItem,
 )
 
-router.get("/health", authenticateAdmin, dashboardController.getSystemHealth)
-
-router.get("/activity", authenticateAdmin, dashboardController.getActivityFeed)
+router.get("/health", checkPermission("dashboard", "read"), dashboardController.getSystemHealth) // Assuming health is a dashboard read
+router.get("/activity", checkPermission("dashboard", "read"), dashboardController.getActivityFeed) // Assuming activity is a dashboard read
 
 module.exports = router

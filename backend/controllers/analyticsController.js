@@ -1,8 +1,18 @@
 const { Order, Payment, Partner, Customer, DailySalesAnalytics, Drone } = require("../models")
 
+// Helper to get partnerId from request if user is a partner
+const getPartnerIdFilter = (req) => {
+    if (req.user && req.user.userType === "partner") {
+        return { partnerId: req.user.id }
+    }
+    return {}
+}
+
 // Get dashboard analytics
 const getDashboardAnalytics = async (req, res) => {
     try {
+        const partnerFilter = getPartnerIdFilter(req)
+
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
@@ -17,6 +27,7 @@ const getDashboardAnalytics = async (req, res) => {
             {
                 $match: {
                     createdAt: { $gte: today },
+                    ...partnerFilter, // Apply partner filter
                 },
             },
             {
@@ -35,6 +46,7 @@ const getDashboardAnalytics = async (req, res) => {
             {
                 $match: {
                     createdAt: { $gte: thisMonth },
+                    ...partnerFilter, // Apply partner filter
                 },
             },
             {
@@ -48,7 +60,7 @@ const getDashboardAnalytics = async (req, res) => {
         ])
 
         // Recent orders
-        const recentOrders = await Order.find()
+        const recentOrders = await Order.find(partnerFilter) // Apply partner filter
             .populate("customerId", "firstName lastName")
             .populate("partnerId", "businessName partnerType")
             .sort({ createdAt: -1 })
@@ -56,6 +68,9 @@ const getDashboardAnalytics = async (req, res) => {
 
         // Payment status breakdown
         const paymentStats = await Payment.aggregate([
+            {
+                $match: partnerFilter, // Apply partner filter
+            },
             {
                 $group: {
                     _id: "$paymentStatus",
@@ -65,52 +80,58 @@ const getDashboardAnalytics = async (req, res) => {
             },
         ])
 
-        // Top performing partners
-        const topPartners = await Order.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: thisMonth },
-                    status: "delivered",
+        // Top performing partners (only relevant for super admin, or if partner wants to see their own rank)
+        let topPartners = []
+        if (!partnerFilter.partnerId) {
+            topPartners = await Order.aggregate([
+                {
+                    $match: {
+                        createdAt: { $gte: thisMonth },
+                        status: "delivered",
+                    },
                 },
-            },
-            {
-                $group: {
-                    _id: "$partnerId",
-                    totalOrders: { $sum: 1 },
-                    totalRevenue: { $sum: "$totalAmount" },
-                    totalProfit: { $sum: "$netProfit" },
+                {
+                    $group: {
+                        _id: "$partnerId",
+                        totalOrders: { $sum: 1 },
+                        totalRevenue: { $sum: "$totalAmount" },
+                        totalProfit: { $sum: "$netProfit" },
+                    },
                 },
-            },
-            {
-                $lookup: {
-                    from: "partners",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "partner",
+                {
+                    $lookup: {
+                        from: "partners",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "partner",
+                    },
                 },
-            },
-            {
-                $unwind: "$partner",
-            },
-            {
-                $project: {
-                    partnerName: "$partner.businessName",
-                    partnerType: "$partner.partnerType",
-                    totalOrders: 1,
-                    totalRevenue: 1,
-                    totalProfit: 1,
+                {
+                    $unwind: "$partner",
                 },
-            },
-            {
-                $sort: { totalRevenue: -1 },
-            },
-            {
-                $limit: 5,
-            },
-        ])
+                {
+                    $project: {
+                        partnerName: "$partner.businessName",
+                        partnerType: "$partner.partnerType",
+                        totalOrders: 1,
+                        totalRevenue: 1,
+                        totalProfit: 1,
+                    },
+                },
+                {
+                    $sort: { totalRevenue: -1 },
+                },
+                {
+                    $limit: 5,
+                },
+            ])
+        }
 
         // Order status distribution
         const orderStatusStats = await Order.aggregate([
+            {
+                $match: partnerFilter, // Apply partner filter
+            },
             {
                 $group: {
                     _id: "$status",
@@ -143,6 +164,7 @@ const getDashboardAnalytics = async (req, res) => {
 const getSalesAnalytics = async (req, res) => {
     try {
         const { period = "7d", startDate, endDate } = req.query
+        const partnerFilter = getPartnerIdFilter(req)
 
         let dateFilter = {}
         const now = new Date()
@@ -185,7 +207,7 @@ const getSalesAnalytics = async (req, res) => {
         // Daily sales trend
         const salesTrend = await Order.aggregate([
             {
-                $match: dateFilter,
+                $match: { ...dateFilter, ...partnerFilter }, // Apply partner filter
             },
             {
                 $group: {
@@ -204,36 +226,39 @@ const getSalesAnalytics = async (req, res) => {
             },
         ])
 
-        // Partner type performance
-        const partnerTypeStats = await Order.aggregate([
-            {
-                $match: dateFilter,
-            },
-            {
-                $lookup: {
-                    from: "partners",
-                    localField: "partnerId",
-                    foreignField: "_id",
-                    as: "partner",
+        // Partner type performance (only relevant for super admin)
+        let partnerTypeStats = []
+        if (!partnerFilter.partnerId) {
+            partnerTypeStats = await Order.aggregate([
+                {
+                    $match: dateFilter,
                 },
-            },
-            {
-                $unwind: "$partner",
-            },
-            {
-                $group: {
-                    _id: "$partner.partnerType",
-                    totalOrders: { $sum: 1 },
-                    totalRevenue: { $sum: "$totalAmount" },
-                    totalProfit: { $sum: "$netProfit" },
+                {
+                    $lookup: {
+                        from: "partners",
+                        localField: "partnerId",
+                        foreignField: "_id",
+                        as: "partner",
+                    },
                 },
-            },
-        ])
+                {
+                    $unwind: "$partner",
+                },
+                {
+                    $group: {
+                        _id: "$partner.partnerType",
+                        totalOrders: { $sum: 1 },
+                        totalRevenue: { $sum: "$totalAmount" },
+                        totalProfit: { $sum: "$netProfit" },
+                    },
+                },
+            ])
+        }
 
         // Hourly order distribution
         const hourlyStats = await Order.aggregate([
             {
-                $match: dateFilter,
+                $match: { ...dateFilter, ...partnerFilter }, // Apply partner filter
             },
             {
                 $group: {
@@ -374,6 +399,7 @@ const generateDailyAnalytics = async (req, res) => {
 const getRevenueAnalytics = async (req, res) => {
     try {
         const { period = "30d", groupBy = "day" } = req.query
+        const partnerFilter = getPartnerIdFilter(req)
 
         let dateFilter = {}
         const now = new Date()
@@ -419,7 +445,7 @@ const getRevenueAnalytics = async (req, res) => {
         }
 
         const revenueData = await Order.aggregate([
-            { $match: { ...dateFilter, status: "delivered" } },
+            { $match: { ...dateFilter, ...partnerFilter, status: "delivered" } }, // Apply partner filter
             {
                 $group: {
                     _id: groupId,
@@ -475,6 +501,7 @@ const getRevenueAnalytics = async (req, res) => {
 const getPartnerAnalytics = async (req, res) => {
     try {
         const { period = "30d", limit = 10 } = req.query
+        const partnerFilter = getPartnerIdFilter(req) // This will filter for the specific partner if logged in as one
 
         let dateFilter = {}
         const now = new Date()
@@ -492,7 +519,7 @@ const getPartnerAnalytics = async (req, res) => {
         }
 
         const partnerPerformance = await Order.aggregate([
-            { $match: { ...dateFilter, status: "delivered" } },
+            { $match: { ...dateFilter, ...partnerFilter, status: "delivered" } }, // Apply partner filter
             {
                 $lookup: {
                     from: "partners",
@@ -524,16 +551,19 @@ const getPartnerAnalytics = async (req, res) => {
             { $limit: Number.parseInt(limit) },
         ])
 
-        // Partner type distribution
-        const partnerTypeStats = await Partner.aggregate([
-            {
-                $group: {
-                    _id: "$partnerType",
-                    count: { $sum: 1 },
-                    activeCount: { $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] } },
+        // Partner type distribution (only relevant for super admin)
+        let partnerTypeStats = []
+        if (!partnerFilter.partnerId) {
+            partnerTypeStats = await Partner.aggregate([
+                {
+                    $group: {
+                        _id: "$partnerType",
+                        count: { $sum: 1 },
+                        activeCount: { $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] } },
+                    },
                 },
-            },
-        ])
+            ])
+        }
 
         res.json({
             success: true,
@@ -555,6 +585,7 @@ const getPartnerAnalytics = async (req, res) => {
 const getCustomerAnalytics = async (req, res) => {
     try {
         const { period = "30d" } = req.query
+        const partnerFilter = getPartnerIdFilter(req) // Apply partner filter
 
         let dateFilter = {}
         const now = new Date()
@@ -589,7 +620,7 @@ const getCustomerAnalytics = async (req, res) => {
 
         // Customer lifetime value
         const customerLTV = await Order.aggregate([
-            { $match: { status: "delivered" } },
+            { $match: { ...partnerFilter, status: "delivered" } }, // Apply partner filter
             {
                 $group: {
                     _id: "$customerId",
@@ -611,7 +642,7 @@ const getCustomerAnalytics = async (req, res) => {
 
         // Customer retention
         const retentionData = await Order.aggregate([
-            { $match: { status: "delivered" } },
+            { $match: { ...partnerFilter, status: "delivered" } }, // Apply partner filter
             {
                 $group: {
                     _id: "$customerId",
@@ -648,6 +679,7 @@ const getCustomerAnalytics = async (req, res) => {
 const getDroneAnalytics = async (req, res) => {
     try {
         const { period = "30d" } = req.query
+        const partnerFilter = getPartnerIdFilter(req) // Apply partner filter
 
         let dateFilter = {}
         const now = new Date()
@@ -666,7 +698,7 @@ const getDroneAnalytics = async (req, res) => {
 
         // Drone utilization
         const droneUtilization = await Order.aggregate([
-            { $match: { ...dateFilter, assignedDroneId: { $exists: true } } },
+            { $match: { ...dateFilter, ...partnerFilter, assignedDroneId: { $exists: true } } }, // Apply partner filter
             {
                 $lookup: {
                     from: "drones",
@@ -695,7 +727,7 @@ const getDroneAnalytics = async (req, res) => {
             { $sort: { totalFlights: -1 } },
         ])
 
-        // Fleet status
+        // Fleet status (not directly filtered by partner, but overall fleet)
         const fleetStatus = await Drone.aggregate([
             {
                 $group: {
@@ -705,7 +737,7 @@ const getDroneAnalytics = async (req, res) => {
             },
         ])
 
-        // Battery levels
+        // Battery levels (not directly filtered by partner, but overall fleet)
         const batteryStats = await Drone.aggregate([
             {
                 $group: {
@@ -738,6 +770,7 @@ const getDroneAnalytics = async (req, res) => {
 const getOperationalAnalytics = async (req, res) => {
     try {
         const { period = "30d" } = req.query
+        const partnerFilter = getPartnerIdFilter(req) // Apply partner filter
 
         let dateFilter = {}
         const now = new Date()
@@ -756,7 +789,7 @@ const getOperationalAnalytics = async (req, res) => {
 
         // Delivery performance
         const deliveryPerformance = await Order.aggregate([
-            { $match: { ...dateFilter, status: "delivered", deliveredAt: { $exists: true } } },
+            { $match: { ...dateFilter, ...partnerFilter, status: "delivered", deliveredAt: { $exists: true } } }, // Apply partner filter
             {
                 $project: {
                     deliveryTime: {
@@ -779,7 +812,7 @@ const getOperationalAnalytics = async (req, res) => {
 
         // Order status distribution
         const statusDistribution = await Order.aggregate([
-            { $match: dateFilter },
+            { $match: { ...dateFilter, ...partnerFilter } }, // Apply partner filter
             {
                 $group: {
                     _id: "$status",
@@ -790,7 +823,7 @@ const getOperationalAnalytics = async (req, res) => {
 
         // Peak hours analysis
         const peakHours = await Order.aggregate([
-            { $match: dateFilter },
+            { $match: { ...dateFilter, ...partnerFilter } }, // Apply partner filter
             {
                 $group: {
                     _id: { $hour: "$createdAt" },
@@ -802,7 +835,7 @@ const getOperationalAnalytics = async (req, res) => {
 
         // Cancellation reasons (if you track them)
         const cancellationStats = await Order.aggregate([
-            { $match: { ...dateFilter, status: "cancelled" } },
+            { $match: { ...dateFilter, ...partnerFilter, status: "cancelled" } }, // Apply partner filter
             {
                 $group: {
                     _id: null,
@@ -836,16 +869,40 @@ const exportAnalytics = async (req, res) => {
         const { reportType, format = "json", ...filters } = req.query
 
         let analyticsData
+        // Simulate req and res objects for controller calls
+        const mockReq = { query: filters, user: req.user }
+        const mockRes = {
+            json: (data) => {
+                analyticsData = data
+            },
+            status: (code) => ({
+                json: (data) => {
+                    analyticsData = data
+                },
+            }),
+        }
+
         switch (reportType) {
             case "dashboard":
-                // Get dashboard data
-                analyticsData = await getDashboardAnalytics({ query: filters }, { json: (data) => data })
+                await getDashboardAnalytics(mockReq, mockRes)
                 break
             case "sales":
-                analyticsData = await getSalesAnalytics({ query: filters }, { json: (data) => data })
+                await getSalesAnalytics(mockReq, mockRes)
                 break
             case "revenue":
-                analyticsData = await getRevenueAnalytics({ query: filters }, { json: (data) => data })
+                await getRevenueAnalytics(mockReq, mockRes)
+                break
+            case "partners":
+                await getPartnerAnalytics(mockReq, mockRes)
+                break
+            case "customers":
+                await getCustomerAnalytics(mockReq, mockRes)
+                break
+            case "drones":
+                await getDroneAnalytics(mockReq, mockRes)
+                break
+            case "operations":
+                await getOperationalAnalytics(mockReq, mockRes)
                 break
             default:
                 return res.status(400).json({

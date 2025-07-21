@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
-const { AdminUser, Customer } = require("../models")
+const { AdminUser, Customer, Partner } = require("../models") // Added Partner model
 
 // Generate JWT Token
 const generateToken = (id, role, userType) => {
@@ -56,6 +56,7 @@ const adminLogin = async (req, res) => {
                     email: admin.email,
                     role: admin.role,
                     permissions: admin.permissions,
+                    userType: "admin", // Explicitly add userType
                 },
             },
         })
@@ -139,6 +140,7 @@ const adminSignup = async (req, res) => {
                     email: admin.email,
                     role: admin.role,
                     permissions: admin.permissions,
+                    userType: "admin", // Explicitly add userType
                 },
             },
         })
@@ -224,6 +226,7 @@ const createSuperAdmin = async (req, res) => {
                     name: `${superAdmin.firstName} ${superAdmin.lastName}`,
                     email: superAdmin.email,
                     role: superAdmin.role,
+                    userType: "admin", // Explicitly add userType
                 },
             },
         })
@@ -280,6 +283,7 @@ const customerLogin = async (req, res) => {
                     lastName: customer.lastName,
                     email: customer.email,
                     phone: customer.phone,
+                    userType: "customer", // Explicitly add userType
                 },
             },
         })
@@ -339,10 +343,141 @@ const customerRegister = async (req, res) => {
                     lastName: customer.lastName,
                     email: customer.email,
                     phone: customer.phone,
+                    userType: "customer", // Explicitly add userType
                 },
             },
         })
     } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message,
+        })
+    }
+}
+
+// Partner Login
+const partnerLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body
+
+        // Find partner
+        const partner = await Partner.findOne({ email, isActive: true })
+        if (!partner) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+            })
+        }
+
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, partner.password)
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+            })
+        }
+
+        // Update last login
+        partner.lastLogin = new Date()
+        await partner.save()
+
+        // Generate tokens
+        const token = generateToken(partner._id, "partner", "partner")
+        const refreshToken = generateRefreshToken(partner._id, "partner", "partner")
+
+        res.json({
+            success: true,
+            message: "Login successful",
+            data: {
+                token,
+                refreshToken,
+                user: {
+                    id: partner._id,
+                    ownerName: partner.ownerName,
+                    email: partner.email,
+                    phone: partner.phone,
+                    businessName: partner.businessName,
+                    partnerType: partner.partnerType,
+                    outlets: partner.outlets, // Include outlets
+                    userType: "partner", // Explicitly add userType
+                },
+            },
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message,
+        })
+    }
+}
+
+// Partner Registration
+const partnerRegister = async (req, res) => {
+    try {
+        const { firstName, lastName, email, phone, password, businessName, partnerType, street, city, state, pincode } =
+            req.body
+
+        // Check if partner already exists with this email or phone
+        const existingPartner = await Partner.findOne({
+            $or: [{ email }, { phone }],
+        })
+
+        if (existingPartner) {
+            return res.status(400).json({
+                success: false,
+                message: "Partner already exists with this email or phone",
+            })
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12)
+
+        // Create partner
+        const partner = new Partner({
+            ownerName: `${firstName} ${lastName}`,
+            email,
+            phone,
+            password: hashedPassword,
+            businessName,
+            partnerType,
+            address: {
+                street,
+                city,
+                state,
+                pincode,
+                // coordinates will be added later if needed
+            },
+        })
+
+        await partner.save()
+
+        // Generate tokens
+        const token = generateToken(partner._id, "partner", "partner")
+        const refreshToken = generateRefreshToken(partner._id, "partner", "partner")
+
+        res.status(201).json({
+            success: true,
+            message: "Partner account created successfully",
+            data: {
+                token,
+                refreshToken,
+                user: {
+                    id: partner._id,
+                    ownerName: partner.ownerName,
+                    email: partner.email,
+                    phone: partner.phone,
+                    businessName: partner.businessName,
+                    partnerType: partner.partnerType,
+                    outlets: partner.outlets, // Should be empty array initially
+                    userType: "partner", // Explicitly add userType
+                },
+            },
+        })
+    } catch (error) {
+        console.log(error)
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -369,8 +504,10 @@ const refreshToken = async (req, res) => {
         let user
         if (decoded.userType === "admin") {
             user = await AdminUser.findById(decoded.id)
-        } else {
+        } else if (decoded.userType === "customer") {
             user = await Customer.findById(decoded.id)
+        } else if (decoded.userType === "partner") {
+            user = await Partner.findById(decoded.id).populate("outlets") // Populate outlets for partner
         }
 
         if (!user || !user.isActive) {
@@ -381,13 +518,47 @@ const refreshToken = async (req, res) => {
         }
 
         // Generate new access token
-        const newToken = generateToken(user._id, user.role || "customer", decoded.userType)
+        const newToken = generateToken(user._id, user.role || "customer", decoded.userType) // Use user.role for admin/partner, default to customer
+
+        // Prepare user data for response based on userType
+        let userData = {}
+        if (decoded.userType === "admin") {
+            userData = {
+                id: user._id,
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+                role: user.role,
+                permissions: user.permissions,
+                userType: "admin",
+            }
+        } else if (decoded.userType === "customer") {
+            userData = {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                userType: "customer",
+            }
+        } else if (decoded.userType === "partner") {
+            userData = {
+                id: user._id,
+                ownerName: user.ownerName,
+                email: user.email,
+                phone: user.phone,
+                businessName: user.businessName,
+                partnerType: user.partnerType,
+                outlets: user.outlets.map((outlet) => outlet._id), // Return only outlet IDs
+                userType: "partner",
+            }
+        }
 
         res.json({
             success: true,
             message: "Token refreshed successfully",
             data: {
                 token: newToken,
+                user: userData, // Include user data
             },
         })
     } catch (error) {
@@ -408,8 +579,10 @@ const logout = async (req, res) => {
         let user
         if (userType === "admin") {
             user = await AdminUser.findById(userId)
-        } else {
+        } else if (userType === "customer") {
             user = await Customer.findById(userId)
+        } else if (userType === "partner") {
+            user = await Partner.findById(userId) // Find partner
         }
 
         if (user) {
@@ -441,8 +614,10 @@ const forgotPassword = async (req, res) => {
         let user
         if (userType === "admin") {
             user = await AdminUser.findOne({ email, isActive: true })
-        } else {
+        } else if (userType === "customer") {
             user = await Customer.findOne({ email, isActive: true })
+        } else if (userType === "partner") {
+            user = await Partner.findOne({ email, isActive: true }) // Find partner
         }
 
         if (!user) {
@@ -489,8 +664,10 @@ const resetPassword = async (req, res) => {
         let user
         if (decoded.userType === "admin") {
             user = await AdminUser.findById(decoded.id)
-        } else {
+        } else if (decoded.userType === "customer") {
             user = await Customer.findById(decoded.id)
+        } else if (decoded.userType === "partner") {
+            user = await Partner.findById(decoded.id) // Find partner
         }
 
         if (!user || user.passwordResetToken !== token || user.passwordResetExpires < new Date()) {
@@ -537,8 +714,10 @@ const changePassword = async (req, res) => {
         let user
         if (userType === "admin") {
             user = await AdminUser.findById(userId)
-        } else {
+        } else if (userType === "customer") {
             user = await Customer.findById(userId)
+        } else if (userType === "partner") {
+            user = await Partner.findById(userId) // Find partner
         }
 
         if (!user) {
@@ -581,6 +760,8 @@ module.exports = {
     createSuperAdmin,
     customerLogin,
     customerRegister,
+    partnerLogin, // Exported new function
+    partnerRegister, // Exported new function
     refreshToken,
     logout,
     forgotPassword,

@@ -1,21 +1,23 @@
 const AdminUser = require("./AdminUser")
 const Customer = require("./Customer")
-const Partner = require("./Patner")
-const Product = require("./Product")
-const Order = require("./Order")
-const Payment = require("./Payment")
+const DailySalesAnalytics = require("./DailySalesAnalytics")
 const Drone = require("./Drone")
 const DroneOperator = require("./DroneOperator")
-const DailySalesAnalytics = require("./DailySalesAnalytics")
+const Order = require("./Order")
+const Partner = require("./Partner") // Corrected typo from Patner to Partner
+const Payment = require("./Payment")
+const Product = require("./Product")
+const Outlet = require("./Outlet") // Added Outlet model
 
 module.exports = {
     AdminUser,
     Customer,
-    Partner,
-    Product,
-    Order,
-    Payment,
+    DailySalesAnalytics,
     Drone,
     DroneOperator,
-    DailySalesAnalytics,
+    Order,
+    Partner, // Corrected typo
+    Payment,
+    Product,
+    Outlet, // Exported Outlet
 }

@@ -27,6 +27,20 @@ const partnerSchema = new mongoose.Schema(
 
         alternatePhone: String,
 
+        // Added for login functionality
+        password: {
+            type: String,
+            required: true,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+        lastLogin: Date,
+        lastLogout: Date,
+        passwordResetToken: String,
+        passwordResetExpires: Date,
+
         // Business Details
         partnerType: {
             type: String,
@@ -156,15 +170,18 @@ const partnerSchema = new mongoose.Schema(
         },
 
         // Settings
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
-
         acceptingOrders: {
             type: Boolean,
             default: true,
         },
+
+        // Link to Outlets
+        outlets: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Outlet",
+            },
+        ],
 
         // Additional Information
         description: String,
