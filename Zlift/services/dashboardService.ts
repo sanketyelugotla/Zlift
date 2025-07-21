@@ -51,6 +51,14 @@ interface PartnerManagerStats {
     totalItems: number
 }
 
+interface PartnerDashboardStats {
+    totalOrders: number
+    successfulOrders: number
+    cancelledOrders: number
+    totalItems: number
+    todayRevenue: number
+}
+
 interface SuperAdminAnalytics {
     perPartnerRevenue: Array<{ name: string; revenue: number }>
     avgOrderCost: number
@@ -79,6 +87,7 @@ class DashboardService extends BaseService {
         super()
     }
 
+    // This method is likely for a general dashboard, might be deprecated or refactored
     async getDashboardStats(): Promise<any> {
         try {
             const response = await this.get<DashboardStats>("/dashboard/stats")
@@ -106,7 +115,7 @@ class DashboardService extends BaseService {
 
     async getSuperAdminStats(): Promise<any> {
         try {
-            const response = await this.get<SuperAdminStats>("/dashboard/super-admin-stats")
+            const response = await this.get<SuperAdminStats>("/dashboard/super-admin/stats")
             return response
         } catch (error: any) {
             console.error("Failed to fetch super admin stats:", error)
@@ -127,7 +136,7 @@ class DashboardService extends BaseService {
 
     async getPartnerManagerStats(): Promise<any> {
         try {
-            const response = await this.get<PartnerManagerStats>("/dashboard/partner-manager-stats")
+            const response = await this.get<PartnerManagerStats>("/dashboard/partner-manager/stats")
             return response
         } catch (error: any) {
             console.error("Failed to fetch partner manager stats:", error)
@@ -141,6 +150,28 @@ class DashboardService extends BaseService {
                     successfulOrders: 142,
                     cancelledOrders: 14,
                     totalItems: 89,
+                },
+            }
+        }
+    }
+
+    async getPartnerDashboardStats(): Promise<any> {
+        try {
+            const response = await this.get<PartnerDashboardStats>("/dashboard/partner/stats")
+            return response
+        } catch (error: any) {
+            console.error("Failed to fetch partner dashboard stats:", error)
+
+            // Return demo data for development
+            return {
+                success: true,
+                message: "Partner dashboard stats retrieved (Demo Mode)",
+                data: {
+                    totalOrders: 75,
+                    successfulOrders: 68,
+                    cancelledOrders: 7,
+                    totalItems: 30,
+                    todayRevenue: 850.5,
                 },
             }
         }
@@ -263,7 +294,7 @@ class DashboardService extends BaseService {
 
     async getInventoryItems(): Promise<any> {
         try {
-            const response = await this.get<InventoryItem[]>("/inventory/items")
+            const response = await this.get<InventoryItem[]>("/dashboard/inventory")
             return response
         } catch (error: any) {
             console.error("Failed to fetch inventory items:", error)

@@ -1,97 +1,80 @@
 "use client"
 
+import type React from "react"
+import { useEffect } from "react"
 import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
-import { useAuth } from "../../contexts/AuthContext"
+import { useColorScheme } from "@/components/useColorScheme"
+import Colors from "@/constants/Colors"
+import { useAuth } from "@/contexts/AuthContext"
+import { Redirect } from "expo-router"
+
+// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof Ionicons>["name"]
+  color: string
+}) {
+  return <Ionicons size={28} style={{ marginBottom: -3 }} {...props} />
+}
 
 export default function TabLayout() {
-  const { user } = useAuth()
+  const colorScheme = useColorScheme()
+  const { isAuthenticated, user, isLoadingAuth, refreshPartnerOutlets } = useAuth()
 
-  // Super Admin Navigation
-  if (user?.role === "super_admin") {
-    return (
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: "#667eea",
-          tabBarInactiveTintColor: "#999",
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: "white",
-            borderTopWidth: 1,
-            borderTopColor: "#f0f0f0",
-            height: 60,
-            paddingBottom: 8,
-            paddingTop: 20,
-          },
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Dashboard",
-            tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="analytics"
-          options={{
-            title: "Analytics",
-            tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Profile",
-            tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
-          }}
-        />
-      </Tabs>
-    )
+  useEffect(() => {
+    // If user is a partner, refresh their outlets to ensure the latest data is in context
+    if (user && user.userType === "partner") {
+      refreshPartnerOutlets()
+    }
+  }, [user, refreshPartnerOutlets])
+
+  if (isLoadingAuth) {
+    // Optionally render a loading spinner or splash screen
+    return null
   }
 
-  // Partner Manager Navigation
+  if (!isAuthenticated) {
+    return <Redirect href="/login" />
+  }
+
+  // Conditional redirect for partners without outlets
+  if (user && user.userType === "partner" && user.outlets && user.outlets.length === 0) {
+    return <Redirect href="/create-outlet" />
+  }
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#667eea",
-        tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "white",
-          borderTopWidth: 0,
-          height: 80,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="inventory"
         options={{
           title: "Inventory",
-          tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="cube" color={color} />,
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           title: "Analytics",
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="stats-chart" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="person" color={color} />,
         }}
       />
     </Tabs>

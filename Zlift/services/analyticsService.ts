@@ -29,7 +29,7 @@ class AnalyticsService extends BaseService {
     async getSalesAnalytics(params?: {
         startDate?: string
         endDate?: string
-        partnerId?: string
+        partnerId?: string // Added partnerId filter
         groupBy?: "day" | "week" | "month"
         period?: string
     }): Promise<any> {
@@ -93,6 +93,7 @@ class AnalyticsService extends BaseService {
         startDate?: string
         endDate?: string
         groupBy?: "day" | "week" | "month"
+        partnerId?: string // Added partnerId filter
     }): Promise<
         ApiResponse<{
             totalRevenue: number
@@ -109,6 +110,7 @@ class AnalyticsService extends BaseService {
     async getPerformanceMetrics(params?: {
         startDate?: string
         endDate?: string
+        partnerId?: string // Added partnerId filter
     }): Promise<ApiResponse<PerformanceMetrics>> {
         const queryString = this.buildQueryString(params)
         return this.request(`/analytics/performance${queryString}`)
@@ -117,6 +119,7 @@ class AnalyticsService extends BaseService {
     async getCustomerAnalytics(params?: {
         startDate?: string
         endDate?: string
+        partnerId?: string // Added partnerId filter
     }): Promise<
         ApiResponse<{
             totalCustomers: number
@@ -136,6 +139,7 @@ class AnalyticsService extends BaseService {
     async getOperationalAnalytics(params?: {
         startDate?: string
         endDate?: string
+        partnerId?: string // Added partnerId filter
     }): Promise<
         ApiResponse<{
             totalDeliveries: number
@@ -167,6 +171,7 @@ class AnalyticsService extends BaseService {
             endDate: string
             format?: "pdf" | "excel" | "csv"
             email?: string
+            partnerId?: string // Added partnerId filter
         },
     ): Promise<
         ApiResponse<{

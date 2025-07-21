@@ -20,19 +20,24 @@ import { useAuth } from "../contexts/AuthContext"
 
 export default function SignupScreen() {
     const [formData, setFormData] = useState({
-        firstName: "Sanket",
-        lastName: "Yelugotla",
-        email: "sanket@gmail.com",
-        password: "Sanket@123",
-        confirmPassword: "Sanket@123",
-        phone: "9550572255",
-        role: "partner_manager",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+        businessName: "", // New required field
+        partnerType: "", // New required field
+        street: "", // New required field for address
+        city: "", // New required field for address
+        state: "", // New required field for address
+        pincode: "", // New required field for address
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
-    const { signup } = useAuth()
+    const { partnerRegister } = useAuth()
     const router = useRouter()
 
     const handleInputChange = (field: string, value: string) => {
@@ -40,7 +45,20 @@ export default function SignupScreen() {
     }
 
     const validateForm = () => {
-        const { firstName, lastName, email, password, confirmPassword, phone } = formData
+        const {
+            firstName,
+            lastName,
+            email,
+            phone,
+            password,
+            confirmPassword,
+            businessName,
+            partnerType,
+            street,
+            city,
+            state,
+            pincode,
+        } = formData
 
         if (!firstName.trim()) {
             Alert.alert("Error", "First name is required")
@@ -87,6 +105,36 @@ export default function SignupScreen() {
             return false
         }
 
+        if (!businessName.trim()) {
+            Alert.alert("Error", "Business Name is required")
+            return false
+        }
+
+        if (!partnerType.trim()) {
+            Alert.alert("Error", "Partner Type is required (e.g., restaurant, grocery, retail, pharmacy)")
+            return false
+        }
+
+        if (!street.trim()) {
+            Alert.alert("Error", "Street Address is required")
+            return false
+        }
+
+        if (!city.trim()) {
+            Alert.alert("Error", "City is required")
+            return false
+        }
+
+        if (!state.trim()) {
+            Alert.alert("Error", "State is required")
+            return false
+        }
+
+        if (!pincode.trim()) {
+            Alert.alert("Error", "Pincode is required")
+            return false
+        }
+
         return true
     }
 
@@ -95,16 +143,19 @@ export default function SignupScreen() {
 
         setIsLoading(true)
         try {
-            const res = await signup(formData)
-            console.log(res)
-            Alert.alert("Success", "Account created successfully! Please login.", [
-                {
-                    text: "OK",
-                    onPress: () => router.replace("/login"),
-                },
-            ])
+            const response = await partnerRegister(formData)
+            if (response.success) {
+                Alert.alert("Success", "Partner account created successfully! Now, let's set up your first outlet.", [
+                    {
+                        text: "OK",
+                        onPress: () => router.replace("/createOutlet"), // Redirect to create outlet page
+                    },
+                ])
+            } else {
+                Alert.alert("Signup Failed", response.message || "Failed to create account")
+            }
         } catch (error: any) {
-            Alert.alert("Signup Failed", error.message || "Failed to create account")
+            Alert.alert("Signup Failed", error.message || "An unexpected error occurred during signup")
         } finally {
             setIsLoading(false)
         }
@@ -125,13 +176,15 @@ export default function SignupScreen() {
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
                         <View style={styles.iconContainer}>
-                            <Ionicons name="person-add" size={60} color="white" />
+                            <Ionicons name="business-outline" size={60} color="white" />
                         </View>
-                        <Text style={styles.title}>Create Account</Text>
-                        <Text style={styles.subtitle}>Join Drone Delivery Admin</Text>
+                        <Text style={styles.title}>Register Your Business</Text>
+                        <Text style={styles.subtitle}>Create your partner account to get started</Text>
                     </View>
 
                     <View style={styles.formContainer}>
+                        {/* Personal Details */}
+                        <Text style={styles.sectionTitle}>Your Details</Text>
                         <View style={styles.row}>
                             <View style={[styles.inputContainer, styles.halfWidth]}>
                                 <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
@@ -187,6 +240,85 @@ export default function SignupScreen() {
                             />
                         </View>
 
+                        {/* Business Details */}
+                        <Text style={styles.sectionTitle}>Business Details</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="briefcase-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Business Name"
+                                placeholderTextColor="#999"
+                                value={formData.businessName}
+                                onChangeText={(value) => handleInputChange("businessName", value)}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="pricetag-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Partner Type (e.g., restaurant, grocery, retail, pharmacy)"
+                                placeholderTextColor="#999"
+                                value={formData.partnerType}
+                                onChangeText={(value) => handleInputChange("partnerType", value)}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        {/* Business Address */}
+                        <Text style={styles.sectionTitle}>Business Address</Text>
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Street Address"
+                                placeholderTextColor="#999"
+                                value={formData.street}
+                                onChangeText={(value) => handleInputChange("street", value)}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.inputContainer, styles.halfWidth]}>
+                                <Ionicons name="map-outline" size={20} color="#666" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="City"
+                                    placeholderTextColor="#999"
+                                    value={formData.city}
+                                    onChangeText={(value) => handleInputChange("city", value)}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                            <View style={[styles.inputContainer, styles.halfWidth]}>
+                                <Ionicons name="map-outline" size={20} color="#666" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="State"
+                                    placeholderTextColor="#999"
+                                    value={formData.state}
+                                    onChangeText={(value) => handleInputChange("state", value)}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Ionicons name="pin-outline" size={20} color="#666" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Pincode"
+                                placeholderTextColor="#999"
+                                value={formData.pincode}
+                                onChangeText={(value) => handleInputChange("pincode", value)}
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        {/* Password */}
+                        <Text style={styles.sectionTitle}>Account Security</Text>
                         <View style={styles.inputContainer}>
                             <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
@@ -226,7 +358,7 @@ export default function SignupScreen() {
                             onPress={handleSignup}
                             disabled={isLoading}
                         >
-                            <Text style={styles.signupButtonText}>{isLoading ? "Creating Account..." : "Create Account"}</Text>
+                            <Text style={styles.signupButtonText}>{isLoading ? "Registering Business..." : "Register Business"}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.loginLink} onPress={navigateToLogin}>
@@ -279,10 +411,13 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "white",
         marginBottom: 8,
+        textAlign: "center",
     },
     subtitle: {
         fontSize: 16,
         color: "rgba(255, 255, 255, 0.8)",
+        textAlign: "center",
+        paddingHorizontal: 20,
     },
     formContainer: {
         backgroundColor: "white",
@@ -297,9 +432,20 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 10,
     },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+        marginBottom: 15,
+        marginTop: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#eee",
+        paddingBottom: 5,
+    },
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
+        marginBottom: 20,
     },
     inputContainer: {
         flexDirection: "row",
@@ -313,6 +459,7 @@ const styles = StyleSheet.create({
     },
     halfWidth: {
         width: "48%",
+        marginBottom: 0, // Override default marginBottom for row items
     },
     inputIcon: {
         marginRight: 10,

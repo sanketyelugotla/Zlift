@@ -1,18 +1,28 @@
 import BaseService from "./baseService"
 
+interface UserData {
+    id: string
+    email: string
+    userType: "admin" | "customer" | "partner"
+    // Admin specific
+    name?: string
+    role?: string
+    permissions?: Array<{ module: string; actions: string[] }>
+    // Customer specific
+    firstName?: string
+    lastName?: string
+    phone?: string
+    // Partner specific
+    ownerName?: string
+    businessName?: string
+    partnerType?: string
+    outlets?: string[] // Array of outlet IDs
+}
+
 interface LoginResponse {
     token: string
     refreshToken: string
-    user: {
-        id: string
-        name: string
-        email: string
-        role: string
-        permissions?: Array<{
-            module: string
-            actions: string[]
-        }>
-    }
+    user: UserData
 }
 
 interface SignupData {
@@ -21,7 +31,16 @@ interface SignupData {
     email: string
     password: string
     phone: string
-    role?: string
+    role?: string // Only for admin signup
+}
+
+interface PartnerRegisterData extends SignupData {
+    businessName: string
+    partnerType: string
+    street: string
+    city: string
+    state: string
+    pincode: string
 }
 
 interface SuperAdminData extends SignupData {
@@ -35,66 +54,104 @@ class AuthService extends BaseService {
 
     async login(email: string, password: string): Promise<any> {
         try {
-            const response = await this.post<LoginResponse>("/auth/admin/login", {
+            // Try admin login first
+            const adminResponse = await this.post<LoginResponse>("/auth/admin/login", {
                 email,
                 password,
             })
-
-            if (response.success && response.data) {
-                this.setAuthToken(response.data.token)
+            if (adminResponse.success && adminResponse.data) {
+                this.setAuthToken(adminResponse.data.token)
+                return adminResponse
             }
-
-            return response
-        } catch (error: any) {
-            console.error("Login failed:", error)
-
-            // Return demo data for development
-            if (email === "admin@dronedelivery.com" && password === "admin123") {
-                return {
-                    success: true,
-                    message: "Login successful (Demo Mode)",
-                    data: {
-                        token: "demo-token-12345",
-                        refreshToken: "demo-refresh-token-12345",
-                        user: {
-                            id: "demo-user-id",
-                            name: "Demo Super Admin",
-                            email: email,
-                            role: "super_admin",
-                            permissions: [
-                                { module: "dashboard", actions: ["read"] },
-                                { module: "partners", actions: ["read", "write", "update", "delete"] },
-                                { module: "analytics", actions: ["read"] },
-                                { module: "admin", actions: ["read", "write", "update", "delete"] },
-                            ],
-                        },
-                    },
+        } catch (error) {
+            // If admin login fails, try customer login
+            try {
+                const customerResponse = await this.post<LoginResponse>("/auth/customer/login", {
+                    email,
+                    password,
+                })
+                if (customerResponse.success && customerResponse.data) {
+                    this.setAuthToken(customerResponse.data.token)
+                    return customerResponse
                 }
-            } else if (email === "partner@dronedelivery.com" && password === "partner123") {
-                return {
-                    success: true,
-                    message: "Login successful (Demo Mode)",
-                    data: {
-                        token: "demo-token-partner-12345",
-                        refreshToken: "demo-refresh-token-partner-12345",
-                        user: {
-                            id: "demo-partner-id",
-                            name: "Demo Partner Manager",
-                            email: email,
-                            role: "partner_manager",
-                            permissions: [
-                                { module: "dashboard", actions: ["read"] },
-                                { module: "partners", actions: ["read", "write", "update"] },
-                                { module: "products", actions: ["read", "write", "update"] },
-                                { module: "orders", actions: ["read", "update"] },
-                                { module: "analytics", actions: ["read"] },
-                            ],
-                        },
-                    },
+            } catch (error) {
+                // If customer login fails, try partner login
+                try {
+                    const partnerResponse = await this.post<LoginResponse>("/auth/partner/login", {
+                        email,
+                        password,
+                    })
+                    if (partnerResponse.success && partnerResponse.data) {
+                        this.setAuthToken(partnerResponse.data.token)
+                        return partnerResponse
+                    }
+                } catch (error: any) {
+                    console.error("Login failed across all types:", error)
+
+                    // Return demo data for development if all real logins fail
+                    if (email === "admin@dronedelivery.com" && password === "admin123") {
+                        return {
+                            success: true,
+                            message: "Login successful (Demo Mode - Admin)",
+                            data: {
+                                token: "demo-token-admin-12345",
+                                refreshToken: "demo-refresh-token-admin-12345",
+                                user: {
+                                    id: "demo-admin-id",
+                                    name: "Demo Super Admin",
+                                    email: email,
+                                    role: "super_admin",
+                                    permissions: [
+                                        { module: "dashboard", actions: ["read"] },
+                                        { module: "partners", actions: ["read", "write", "update", "delete"] },
+                                        { module: "analytics", actions: ["read"] },
+                                        { module: "admin", actions: ["read", "write", "update", "delete"] },
+                                    ],
+                                    userType: "admin",
+                                },
+                            },
+                        }
+                    } else if (email === "partner@dronedelivery.com" && password === "partner123") {
+                        return {
+                            success: true,
+                            message: "Login successful (Demo Mode - Partner)",
+                            data: {
+                                token: "demo-token-partner-12345",
+                                refreshToken: "demo-refresh-token-partner-12345",
+                                user: {
+                                    id: "demo-partner-id",
+                                    ownerName: "Demo Partner Business",
+                                    email: email,
+                                    role: "partner",
+                                    businessName: "Demo Partner Co.",
+                                    partnerType: "retail",
+                                    outlets: ["outlet-id-1", "outlet-id-2"], // Demo outlets
+                                    userType: "partner",
+                                },
+                            },
+                        }
+                    } else if (email === "customer@dronedelivery.com" && password === "customer123") {
+                        return {
+                            success: true,
+                            message: "Login successful (Demo Mode - Customer)",
+                            data: {
+                                token: "demo-token-customer-12345",
+                                refreshToken: "demo-refresh-token-customer-12345",
+                                user: {
+                                    id: "demo-customer-id",
+                                    firstName: "Demo",
+                                    lastName: "Customer",
+                                    email: email,
+                                    phone: "1234567890",
+                                    userType: "customer",
+                                },
+                            },
+                        }
+                    }
+
+                    throw new Error("Invalid credentials")
                 }
             }
-
-            throw new Error("Invalid credentials")
         }
     }
 
@@ -107,14 +164,27 @@ class AuthService extends BaseService {
 
             return response
         } catch (error: any) {
-            console.error("Signup failed:", error)
+            console.error("Admin Signup failed:", error)
+            throw error
+        }
+    }
+
+    async partnerRegister(data: PartnerRegisterData): Promise<any> {
+        try {
+            const response = await this.post("/auth/partner/register", data)
+            if (response.success && response.data) {
+                this.setAuthToken(response.data.token)
+            }
+            return response
+        } catch (error: any) {
+            console.error("Partner Registration failed:", error)
             throw error
         }
     }
 
     async createSuperAdmin(data: SuperAdminData): Promise<any> {
         try {
-            const response = await this.post("/auth/admin/create-super-admin", data)
+            const response = await this.post("/auth/admin/super-admin", data)
             return response
         } catch (error: any) {
             console.error("Super admin creation failed:", error)
@@ -122,9 +192,10 @@ class AuthService extends BaseService {
         }
     }
 
-    async logout(): Promise<any> {
+    async logout(userType: "admin" | "customer" | "partner"): Promise<any> {
         try {
-            const response = await this.post("/auth/admin/logout")
+            const endpoint = `/auth/${userType}/logout`
+            const response = await this.post(endpoint)
             this.setAuthToken(null)
             return response
         } catch (error: any) {
@@ -140,11 +211,7 @@ class AuthService extends BaseService {
 
     async refreshToken(refreshToken: string): Promise<any> {
         try {
-            interface RefreshTokenResponse {
-                token: string
-                refreshToken: string
-            }
-            const response = await this.post<{ token: string; refreshToken: string }>("/auth/refresh-token", {
+            const response = await this.post<LoginResponse>("/auth/refresh-token", {
                 refreshToken,
             })
 
@@ -159,7 +226,7 @@ class AuthService extends BaseService {
         }
     }
 
-    async forgotPassword(email: string, userType = "admin"): Promise<any> {
+    async forgotPassword(email: string, userType: "admin" | "customer" | "partner"): Promise<any> {
         try {
             const response = await this.post("/auth/forgot-password", {
                 email,
@@ -187,9 +254,14 @@ class AuthService extends BaseService {
         }
     }
 
-    async changePassword(currentPassword: string, newPassword: string): Promise<any> {
+    async changePassword(
+        currentPassword: string,
+        newPassword: string,
+        userType: "admin" | "customer" | "partner",
+    ): Promise<any> {
         try {
-            const response = await this.post("/auth/admin/change-password", {
+            const endpoint = `/auth/${userType}/change-password`
+            const response = await this.post(endpoint, {
                 currentPassword,
                 newPassword,
             })

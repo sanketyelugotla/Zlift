@@ -27,3 +27,10 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     const { status } = await Notifications.requestPermissionsAsync();
     return status === 'granted';
 };
+
+const NotificationService = {
+    sendNotification,
+    requestNotificationPermission,
+};
+
+export default NotificationService;
